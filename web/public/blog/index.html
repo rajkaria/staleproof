@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blog · Staleproof</title>
+<meta name="description" content="Notes from building Staleproof, the open-source agent that keeps docs true to code." />
+<link rel="canonical" href="https://staleproof.dev/blog/" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Blog · Staleproof" />
+<meta property="og:url" content="https://staleproof.dev/blog/" />
+<meta property="og:image" content="https://staleproof.dev/blog/docs-go-stale/cover.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>:root {
+  --bg: #fbfaf7;
+  --surface: #ffffff;
+  --surface-2: #f3f2ed;
+  --text: #121420;
+  --text-2: #3f4350;
+  --muted: #6c7080;
+  --border: #e6e4dd;
+  --brand: #2a4fe6;
+  --brand-strong: #1d3bc4;
+  --brand-ink: #ffffff;
+  --brand-soft: #e9edff;
+  --grad-a: #2a4fe6;
+  --grad-b: #0bb5c9;
+  --code-bg: #eeeef5;
+  --term-bg: #0d1020;
+  --term-text: #e6e7e3;
+  --term-muted: #8b8f98;
+  --fail: #b42318;
+  --fail-bg: #fdecea;
+  --ok: #067647;
+  --ok-bg: #e6f6ec;
+  --header-bg: rgb(251 250 247 / 85%);
+  --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Charter, Georgia, serif;
+  --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0b0c11;
+    --surface: #14161d;
+    --surface-2: #1c1f29;
+    --text: #ecebe6;
+    --text-2: #c9c8c2;
+    --muted: #9598a3;
+    --border: #262a35;
+    --brand: #8aa0ff;
+    --brand-strong: #a9b9ff;
+    --brand-ink: #0a1240;
+    --brand-soft: #181d3a;
+    --grad-a: #8aa0ff;
+    --grad-b: #5ee0f0;
+    --code-bg: #1c1f29;
+    --term-bg: #07080e;
+    --fail: #f97066;
+    --fail-bg: #3a1714;
+    --ok: #47cd89;
+    --ok-bg: #0f2a1b;
+    --header-bg: rgb(11 12 17 / 85%);
+    color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0b0c11;
+  --surface: #14161d;
+  --surface-2: #1c1f29;
+  --text: #ecebe6;
+  --text-2: #c9c8c2;
+  --muted: #9598a3;
+  --border: #262a35;
+  --brand: #8aa0ff;
+  --brand-strong: #a9b9ff;
+  --brand-ink: #0a1240;
+  --brand-soft: #181d3a;
+  --grad-a: #8aa0ff;
+  --grad-b: #5ee0f0;
+  --code-bg: #1c1f29;
+  --term-bg: #07080e;
+  --fail: #f97066;
+  --fail-bg: #3a1714;
+  --ok: #47cd89;
+  --ok-bg: #0f2a1b;
+  --header-bg: rgb(11 12 17 / 85%);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 76px; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 18px/1.7 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--brand); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:hover { color: var(--brand-strong); }
+
+header.top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--header-bg);
+  backdrop-filter: saturate(160%) blur(12px);
+  -webkit-backdrop-filter: saturate(160%) blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.top-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 16px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  text-decoration: none;
+}
+.brand:hover { color: var(--text); }
+header.top nav { display: flex; align-items: center; gap: 2px; font-size: 15px; }
+header.top nav a {
+  color: var(--text-2);
+  padding: 6px 10px;
+  border-radius: 7px;
+  font-weight: 500;
+  text-decoration: none;
+}
+header.top nav a:hover, header.top nav a[aria-current] { color: var(--text); background: var(--surface-2); }
+header.top nav a.gh { display: inline-flex; padding: 6px 8px; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand);
+  color: var(--brand-ink) !important;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 8px 14px;
+  border-radius: 9px;
+  text-decoration: none;
+  line-height: 1.3;
+}
+.btn:hover { background: var(--brand-strong); color: var(--brand-ink); }
+.btn.ghost { background: transparent; color: var(--text) !important; border: 1px solid var(--border); }
+.btn.ghost:hover { background: var(--surface-2); }
+header.top nav a.btn { margin-left: 6px; padding: 7px 12px; }
+
+main { padding: 0 16px; }
+article { max-width: 720px; margin: 0 auto; padding: 56px 0 24px; }
+
+.post-head .eyebrow {
+  margin: 0 0 14px;
+  font: 600 13px/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand);
+}
+.post-head h1 {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: clamp(34px, 6vw, 50px);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  margin: 0;
+  text-wrap: balance;
+}
+.post-head h1::after {
+  content: '';
+  display: block;
+  width: 96px;
+  height: 4px;
+  border-radius: 4px;
+  margin-top: 22px;
+  background: linear-gradient(90deg, var(--grad-a), var(--grad-b));
+}
+.standfirst { font-size: 20px; line-height: 1.55; color: var(--text-2); margin: 22px 0 14px; text-wrap: pretty; }
+.byline { font-size: 15px; color: var(--muted); margin: 0; }
+.byline a { color: var(--text-2); font-weight: 600; text-decoration: none; }
+
+.toc {
+  margin: 36px 0 8px;
+  padding: 18px 22px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  font-size: 16px;
+}
+.toc p { margin: 0 0 6px; font: 600 12px/1.4 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 28px; }
+.toc li { break-inside: avoid; margin: 3px 0; line-height: 1.45; }
+.toc a { color: var(--text-2); text-decoration: none; }
+.toc a:hover { color: var(--brand); text-decoration: underline; }
+@media (max-width: 640px) { .toc ol { columns: 1; } }
+
+.prose { font-size: 18px; }
+.prose > p, .prose li { text-wrap: pretty; }
+.prose h2 {
+  font-family: var(--serif);
+  font-size: 30px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin: 56px 0 14px;
+  position: relative;
+}
+.prose h3 { font-size: 21px; margin: 36px 0 10px; position: relative; }
+.prose .anchor {
+  position: absolute;
+  left: -0.9em;
+  color: var(--muted);
+  text-decoration: none;
+  opacity: 0;
+  font-weight: 400;
+}
+.prose h2:hover .anchor, .prose h3:hover .anchor { opacity: 1; }
+@media (max-width: 800px) { .prose .anchor { display: none; } }
+.prose strong { font-weight: 700; color: var(--text); }
+.prose ul, .prose ol { padding-left: 24px; }
+.prose li { margin: 8px 0; }
+.prose li > p { margin: 0; }
+.prose hr { border: 0; height: 1px; background: var(--border); margin: 48px 0 28px; }
+.prose hr + p { font-size: 15px; color: var(--muted); line-height: 1.6; }
+
+.prose :not(pre) > code {
+  font: 0.86em/1.4 var(--mono);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.1em 0.35em;
+  overflow-wrap: anywhere;
+}
+
+figure.code { margin: 24px 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); background: var(--code-bg); }
+figure.code figcaption {
+  font: 600 11px/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 10px 16px 0;
+}
+figure.code pre { margin: 0; padding: 10px 16px 16px; overflow-x: auto; }
+figure.code code { font: 14px/1.6 var(--mono); color: var(--text); white-space: pre; }
+figure.code.term { background: var(--term-bg); border-color: var(--term-bg); }
+figure.code.term figcaption { color: var(--term-muted); }
+figure.code.term code { color: var(--term-text); }
+
+.table { margin: 24px 0; overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.table table { border-collapse: collapse; width: 100%; font-size: 15px; line-height: 1.45; }
+.table th, .table td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.table th { font-weight: 600; color: var(--text-2); background: var(--surface-2); text-align: left; }
+.table tr:last-child td { border-bottom: 0; }
+
+figure.path {
+  margin: 28px 0;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+figure.path .chips { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; }
+figure.path .chip {
+  flex: 1 1 150px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+figure.path .chip.changed { border-color: var(--brand); background: var(--brand-soft); }
+figure.path .chip.doc { border-style: dashed; }
+figure.path .chip .k { font: 600 10.5px/1 var(--mono); letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+figure.path .chip code { font: 600 14px/1.35 var(--mono); color: var(--text); overflow-wrap: anywhere; }
+figure.path .chip .repo { font-size: 12.5px; color: var(--muted); }
+figure.path .arrow {
+  display: flex;
+  align-items: center;
+  font: 12px/1 var(--mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
+figure.path .arrow span::before { content: '← '; color: var(--brand); font-weight: 700; }
+@media (max-width: 640px) {
+  figure.path .chips { flex-direction: column; }
+  figure.path .chip { flex: 0 0 auto; }
+  figure.path .arrow { padding-left: 12px; }
+  figure.path .arrow span::before { content: '↑ '; }
+}
+figure.path .runs { display: grid; gap: 8px; margin-top: 14px; }
+figure.path .run { font-size: 14.5px; line-height: 1.45; padding: 9px 12px; border-radius: 9px; overflow-wrap: anywhere; }
+figure.path .run code { font: 13px/1.45 var(--mono); }
+figure.path .run.fail { background: var(--fail-bg); color: var(--fail); }
+figure.path .run.pass { background: var(--ok-bg); color: var(--ok); }
+figure.path figcaption { margin-top: 12px; font-size: 14.5px; color: var(--muted); }
+figure.path figcaption code { font: 0.9em var(--mono); }
+
+.cta {
+  margin: 56px 0 0;
+  padding: 28px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(120deg, var(--grad-a), var(--grad-b)) border-box;
+  border: 2px solid transparent;
+}
+.cta h2 { font-family: var(--serif); font-size: 28px; line-height: 1.2; margin: 0 0 8px; }
+.cta p { margin: 0 0 14px; color: var(--text-2); }
+.cta pre { margin: 0 0 18px; padding: 12px 16px; background: var(--term-bg); color: var(--term-text); border-radius: 10px; overflow-x: auto; }
+.cta pre code { font: 15px/1.5 var(--mono); }
+.cta pre code::before { content: '$ '; color: var(--grad-a); }
+.cta-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.post-card {
+  display: block;
+  margin-top: 36px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.post-card:hover { color: var(--text); transform: translateY(-2px); box-shadow: 0 12px 32px -12px rgb(16 24 40 / 25%); }
+.post-card img { display: block; width: 100%; height: auto; border-bottom: 1px solid var(--border); }
+.post-card div { padding: 20px 24px 24px; }
+.post-card h2 { font-family: var(--serif); font-size: 28px; line-height: 1.2; margin: 6px 0 8px; }
+.post-card p:last-child { margin: 0; color: var(--text-2); font-size: 17px; line-height: 1.55; }
+
+.site-footer {
+  max-width: 720px;
+  margin: 48px auto 0;
+  padding: 28px 16px 48px;
+  border-top: 1px solid var(--border);
+  font-size: 15px;
+  color: var(--muted);
+}
+.site-footer p { margin: 0 0 8px; }
+
+@media (max-width: 640px) {
+  body { font-size: 17px; }
+  .prose { font-size: 17px; }
+  article { padding-top: 36px; }
+  .prose h2 { font-size: 26px; margin-top: 44px; }
+  header.top nav a:not(.btn):not(.gh) { display: none; }
+  .standfirst { font-size: 18px; }
+  .cta { padding: 22px 18px; }
+}
+
+/* Inside the path figure, code is a label, not an inline code box. */
+.prose figure.path code { background: none; border: 0; padding: 0; border-radius: 0; color: inherit; }
+.prose figure.path .chip code { font: 600 13.5px/1.35 var(--mono); color: var(--text); overflow-wrap: normal; word-break: normal; }
+.prose figure.path .run code { font: 13px/1.45 var(--mono); overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <a class="brand" href="/"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#2a4fe6"/><path d="M10 6.5h8.5L24 12v13.5H10z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M18.5 6.5V12H24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M13 18.5l3 3 5.5-6" fill="none" stroke="#8ff2ff" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Staleproof</span></a>
+    <nav aria-label="Main">
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="/#/drift">Drift Hall</a>
+      <a href="/#/docs">Docs</a>
+      <a class="gh" href="https://github.com/rajkaria/staleproof" aria-label="Source on GitHub"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a>
+      <a class="btn" href="/#/install">Install</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <article>
+    <header class="post-head">
+      <p class="eyebrow">Blog</p>
+      <h1>Notes from building Staleproof</h1>
+    </header>
+    <a class="post-card" href="/blog/docs-go-stale/">
+      <img src="/blog/docs-go-stale/cover.jpg" alt="" width="1200" height="630" loading="lazy" />
+      <div>
+        <p class="byline"><time datetime="2026-10-18">18 October 2026</time> · 11 min read</p>
+        <h2>Your docs go stale at the speed you ship. I built a graph that catches it.</h2>
+        <p>How I built Staleproof on FalkorDB during Graph Hacks: the graph query behind it, the agent that remembers, what it found in 63 famous repositories, and why I published that my first version was wrong four times out of five.</p>
+      </div>
+    </a>
+  </article>
+</main>
+<footer class="site-footer">
+  <p><a class="brand" href="/"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#2a4fe6"/><path d="M10 6.5h8.5L24 12v13.5H10z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M18.5 6.5V12H24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M13 18.5l3 3 5.5-6" fill="none" stroke="#8ff2ff" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Staleproof</span></a></p>
+  <p>Docs that stay true to your code. Open source, MIT licensed, built on <a href="https://www.falkordb.com" rel="noopener">FalkorDB</a>.</p>
+</footer>
+</body>
+</html>

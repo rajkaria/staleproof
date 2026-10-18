@@ -23,7 +23,7 @@ export function llmsFiles(site = SITE_URL): Record<string, string> {
     'llms-full.txt': llmsFullTxt(read, link),
   };
   for (const d of DOCS) files[`docs/${d.slug}.md`] = read(d);
-  const urls = ['/', '/llms.txt', '/llms-full.txt', ...DOCS.map((d) => `/docs/${d.slug}.md`)];
+  const urls = ['/', '/blog/', '/blog/docs-go-stale/', '/llms.txt', '/llms-full.txt', ...DOCS.map((d) => `/docs/${d.slug}.md`)];
   files['sitemap.xml'] = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',

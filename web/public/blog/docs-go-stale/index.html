@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Your docs go stale at the speed you ship. I built a graph that catches it. · Staleproof</title>
+<meta name="description" content="How I built Staleproof on FalkorDB during Graph Hacks: the graph query behind it, the agent that remembers, what it found in 63 famous repositories, and why I published that my first version was wrong four times out of five." />
+<meta name="author" content="Raj Karia" />
+<link rel="canonical" href="https://staleproof.dev/blog/docs-go-stale/" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<meta name="theme-color" content="#2a4fe6" />
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="Staleproof" />
+<meta property="og:title" content="Your docs go stale at the speed you ship. I built a graph that catches it." />
+<meta property="og:description" content="How I built Staleproof on FalkorDB during Graph Hacks: the graph query behind it, the agent that remembers, what it found in 63 famous repositories, and why I published that my first version was wrong four times out of five." />
+<meta property="og:url" content="https://staleproof.dev/blog/docs-go-stale/" />
+<meta property="og:image" content="https://staleproof.dev/blog/docs-go-stale/cover.jpg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="article:published_time" content="2026-10-18" />
+<meta property="article:author" content="Raj Karia" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Your docs go stale at the speed you ship. I built a graph that catches it." />
+<meta name="twitter:description" content="How I built Staleproof on FalkorDB during Graph Hacks: the graph query behind it, the agent that remembers, what it found in 63 famous repositories, and why I published that my first version was wrong four times out of five." />
+<meta name="twitter:image" content="https://staleproof.dev/blog/docs-go-stale/cover.jpg" />
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"Your docs go stale at the speed you ship. I built a graph that catches it.","description":"How I built Staleproof on FalkorDB during Graph Hacks: the graph query behind it, the agent that remembers, what it found in 63 famous repositories, and why I published that my first version was wrong four times out of five.","datePublished":"2026-10-18","dateModified":"2026-10-18","author":{"@type":"Person","name":"Raj Karia","url":"https://github.com/rajkaria"},"publisher":{"@type":"Organization","name":"Staleproof","url":"https://staleproof.dev/"},"image":"https://staleproof.dev/blog/docs-go-stale/cover.jpg","mainEntityOfPage":"https://staleproof.dev/blog/docs-go-stale/","keywords":"falkordb, graphs, documentation, ai agents, open source"}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>:root {
+  --bg: #fbfaf7;
+  --surface: #ffffff;
+  --surface-2: #f3f2ed;
+  --text: #121420;
+  --text-2: #3f4350;
+  --muted: #6c7080;
+  --border: #e6e4dd;
+  --brand: #2a4fe6;
+  --brand-strong: #1d3bc4;
+  --brand-ink: #ffffff;
+  --brand-soft: #e9edff;
+  --grad-a: #2a4fe6;
+  --grad-b: #0bb5c9;
+  --code-bg: #eeeef5;
+  --term-bg: #0d1020;
+  --term-text: #e6e7e3;
+  --term-muted: #8b8f98;
+  --fail: #b42318;
+  --fail-bg: #fdecea;
+  --ok: #067647;
+  --ok-bg: #e6f6ec;
+  --header-bg: rgb(251 250 247 / 85%);
+  --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Charter, Georgia, serif;
+  --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0b0c11;
+    --surface: #14161d;
+    --surface-2: #1c1f29;
+    --text: #ecebe6;
+    --text-2: #c9c8c2;
+    --muted: #9598a3;
+    --border: #262a35;
+    --brand: #8aa0ff;
+    --brand-strong: #a9b9ff;
+    --brand-ink: #0a1240;
+    --brand-soft: #181d3a;
+    --grad-a: #8aa0ff;
+    --grad-b: #5ee0f0;
+    --code-bg: #1c1f29;
+    --term-bg: #07080e;
+    --fail: #f97066;
+    --fail-bg: #3a1714;
+    --ok: #47cd89;
+    --ok-bg: #0f2a1b;
+    --header-bg: rgb(11 12 17 / 85%);
+    color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0b0c11;
+  --surface: #14161d;
+  --surface-2: #1c1f29;
+  --text: #ecebe6;
+  --text-2: #c9c8c2;
+  --muted: #9598a3;
+  --border: #262a35;
+  --brand: #8aa0ff;
+  --brand-strong: #a9b9ff;
+  --brand-ink: #0a1240;
+  --brand-soft: #181d3a;
+  --grad-a: #8aa0ff;
+  --grad-b: #5ee0f0;
+  --code-bg: #1c1f29;
+  --term-bg: #07080e;
+  --fail: #f97066;
+  --fail-bg: #3a1714;
+  --ok: #47cd89;
+  --ok-bg: #0f2a1b;
+  --header-bg: rgb(11 12 17 / 85%);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 76px; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 18px/1.7 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--brand); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:hover { color: var(--brand-strong); }
+
+header.top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--header-bg);
+  backdrop-filter: saturate(160%) blur(12px);
+  -webkit-backdrop-filter: saturate(160%) blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.top-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 16px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  text-decoration: none;
+}
+.brand:hover { color: var(--text); }
+header.top nav { display: flex; align-items: center; gap: 2px; font-size: 15px; }
+header.top nav a {
+  color: var(--text-2);
+  padding: 6px 10px;
+  border-radius: 7px;
+  font-weight: 500;
+  text-decoration: none;
+}
+header.top nav a:hover, header.top nav a[aria-current] { color: var(--text); background: var(--surface-2); }
+header.top nav a.gh { display: inline-flex; padding: 6px 8px; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand);
+  color: var(--brand-ink) !important;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 8px 14px;
+  border-radius: 9px;
+  text-decoration: none;
+  line-height: 1.3;
+}
+.btn:hover { background: var(--brand-strong); color: var(--brand-ink); }
+.btn.ghost { background: transparent; color: var(--text) !important; border: 1px solid var(--border); }
+.btn.ghost:hover { background: var(--surface-2); }
+header.top nav a.btn { margin-left: 6px; padding: 7px 12px; }
+
+main { padding: 0 16px; }
+article { max-width: 720px; margin: 0 auto; padding: 56px 0 24px; }
+
+.post-head .eyebrow {
+  margin: 0 0 14px;
+  font: 600 13px/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand);
+}
+.post-head h1 {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: clamp(34px, 6vw, 50px);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  margin: 0;
+  text-wrap: balance;
+}
+.post-head h1::after {
+  content: '';
+  display: block;
+  width: 96px;
+  height: 4px;
+  border-radius: 4px;
+  margin-top: 22px;
+  background: linear-gradient(90deg, var(--grad-a), var(--grad-b));
+}
+.standfirst { font-size: 20px; line-height: 1.55; color: var(--text-2); margin: 22px 0 14px; text-wrap: pretty; }
+.byline { font-size: 15px; color: var(--muted); margin: 0; }
+.byline a { color: var(--text-2); font-weight: 600; text-decoration: none; }
+
+.toc {
+  margin: 36px 0 8px;
+  padding: 18px 22px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  font-size: 16px;
+}
+.toc p { margin: 0 0 6px; font: 600 12px/1.4 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 28px; }
+.toc li { break-inside: avoid; margin: 3px 0; line-height: 1.45; }
+.toc a { color: var(--text-2); text-decoration: none; }
+.toc a:hover { color: var(--brand); text-decoration: underline; }
+@media (max-width: 640px) { .toc ol { columns: 1; } }
+
+.prose { font-size: 18px; }
+.prose > p, .prose li { text-wrap: pretty; }
+.prose h2 {
+  font-family: var(--serif);
+  font-size: 30px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin: 56px 0 14px;
+  position: relative;
+}
+.prose h3 { font-size: 21px; margin: 36px 0 10px; position: relative; }
+.prose .anchor {
+  position: absolute;
+  left: -0.9em;
+  color: var(--muted);
+  text-decoration: none;
+  opacity: 0;
+  font-weight: 400;
+}
+.prose h2:hover .anchor, .prose h3:hover .anchor { opacity: 1; }
+@media (max-width: 800px) { .prose .anchor { display: none; } }
+.prose strong { font-weight: 700; color: var(--text); }
+.prose ul, .prose ol { padding-left: 24px; }
+.prose li { margin: 8px 0; }
+.prose li > p { margin: 0; }
+.prose hr { border: 0; height: 1px; background: var(--border); margin: 48px 0 28px; }
+.prose hr + p { font-size: 15px; color: var(--muted); line-height: 1.6; }
+
+.prose :not(pre) > code {
+  font: 0.86em/1.4 var(--mono);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.1em 0.35em;
+  overflow-wrap: anywhere;
+}
+
+figure.code { margin: 24px 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); background: var(--code-bg); }
+figure.code figcaption {
+  font: 600 11px/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 10px 16px 0;
+}
+figure.code pre { margin: 0; padding: 10px 16px 16px; overflow-x: auto; }
+figure.code code { font: 14px/1.6 var(--mono); color: var(--text); white-space: pre; }
+figure.code.term { background: var(--term-bg); border-color: var(--term-bg); }
+figure.code.term figcaption { color: var(--term-muted); }
+figure.code.term code { color: var(--term-text); }
+
+.table { margin: 24px 0; overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.table table { border-collapse: collapse; width: 100%; font-size: 15px; line-height: 1.45; }
+.table th, .table td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.table th { font-weight: 600; color: var(--text-2); background: var(--surface-2); text-align: left; }
+.table tr:last-child td { border-bottom: 0; }
+
+figure.path {
+  margin: 28px 0;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+figure.path .chips { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; }
+figure.path .chip {
+  flex: 1 1 150px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+figure.path .chip.changed { border-color: var(--brand); background: var(--brand-soft); }
+figure.path .chip.doc { border-style: dashed; }
+figure.path .chip .k { font: 600 10.5px/1 var(--mono); letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+figure.path .chip code { font: 600 14px/1.35 var(--mono); color: var(--text); overflow-wrap: anywhere; }
+figure.path .chip .repo { font-size: 12.5px; color: var(--muted); }
+figure.path .arrow {
+  display: flex;
+  align-items: center;
+  font: 12px/1 var(--mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
+figure.path .arrow span::before { content: '← '; color: var(--brand); font-weight: 700; }
+@media (max-width: 640px) {
+  figure.path .chips { flex-direction: column; }
+  figure.path .chip { flex: 0 0 auto; }
+  figure.path .arrow { padding-left: 12px; }
+  figure.path .arrow span::before { content: '↑ '; }
+}
+figure.path .runs { display: grid; gap: 8px; margin-top: 14px; }
+figure.path .run { font-size: 14.5px; line-height: 1.45; padding: 9px 12px; border-radius: 9px; overflow-wrap: anywhere; }
+figure.path .run code { font: 13px/1.45 var(--mono); }
+figure.path .run.fail { background: var(--fail-bg); color: var(--fail); }
+figure.path .run.pass { background: var(--ok-bg); color: var(--ok); }
+figure.path figcaption { margin-top: 12px; font-size: 14.5px; color: var(--muted); }
+figure.path figcaption code { font: 0.9em var(--mono); }
+
+.cta {
+  margin: 56px 0 0;
+  padding: 28px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(120deg, var(--grad-a), var(--grad-b)) border-box;
+  border: 2px solid transparent;
+}
+.cta h2 { font-family: var(--serif); font-size: 28px; line-height: 1.2; margin: 0 0 8px; }
+.cta p { margin: 0 0 14px; color: var(--text-2); }
+.cta pre { margin: 0 0 18px; padding: 12px 16px; background: var(--term-bg); color: var(--term-text); border-radius: 10px; overflow-x: auto; }
+.cta pre code { font: 15px/1.5 var(--mono); }
+.cta pre code::before { content: '$ '; color: var(--grad-a); }
+.cta-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.post-card {
+  display: block;
+  margin-top: 36px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.post-card:hover { color: var(--text); transform: translateY(-2px); box-shadow: 0 12px 32px -12px rgb(16 24 40 / 25%); }
+.post-card img { display: block; width: 100%; height: auto; border-bottom: 1px solid var(--border); }
+.post-card div { padding: 20px 24px 24px; }
+.post-card h2 { font-family: var(--serif); font-size: 28px; line-height: 1.2; margin: 6px 0 8px; }
+.post-card p:last-child { margin: 0; color: var(--text-2); font-size: 17px; line-height: 1.55; }
+
+.site-footer {
+  max-width: 720px;
+  margin: 48px auto 0;
+  padding: 28px 16px 48px;
+  border-top: 1px solid var(--border);
+  font-size: 15px;
+  color: var(--muted);
+}
+.site-footer p { margin: 0 0 8px; }
+
+@media (max-width: 640px) {
+  body { font-size: 17px; }
+  .prose { font-size: 17px; }
+  article { padding-top: 36px; }
+  .prose h2 { font-size: 26px; margin-top: 44px; }
+  header.top nav a:not(.btn):not(.gh) { display: none; }
+  .standfirst { font-size: 18px; }
+  .cta { padding: 22px 18px; }
+}
+
+/* Inside the path figure, code is a label, not an inline code box. */
+.prose figure.path code { background: none; border: 0; padding: 0; border-radius: 0; color: inherit; }
+.prose figure.path .chip code { font: 600 13.5px/1.35 var(--mono); color: var(--text); overflow-wrap: normal; word-break: normal; }
+.prose figure.path .run code { font: 13px/1.45 var(--mono); overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <a class="brand" href="/"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#2a4fe6"/><path d="M10 6.5h8.5L24 12v13.5H10z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M18.5 6.5V12H24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M13 18.5l3 3 5.5-6" fill="none" stroke="#8ff2ff" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Staleproof</span></a>
+    <nav aria-label="Main">
+      <a href="/blog/">Blog</a>
+      <a href="/#/drift">Drift Hall</a>
+      <a href="/#/docs">Docs</a>
+      <a class="gh" href="https://github.com/rajkaria/staleproof" aria-label="Source on GitHub"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a>
+      <a class="btn" href="/#/install">Install</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <article>
+    <header class="post-head">
+      <p class="eyebrow">Graph Hacks · built on FalkorDB</p>
+      <h1>Your docs go stale at the speed you ship. I built a graph that catches it.</h1>
+      <p class="standfirst">How I built Staleproof on FalkorDB during Graph Hacks: the graph query behind it, the agent that remembers, what it found in 63 famous repositories, and why I published that my first version was wrong four times out of five.</p>
+      <p class="byline"><a href="https://github.com/rajkaria">Raj Karia</a> · <time datetime="2026-10-18">18 October 2026</time> · 11 min read</p>
+    </header>
+    <nav class="toc" aria-label="In this post">
+      <p>In this post</p>
+      <ol><li><a href="#docs-are-prompts-now">Docs are prompts now</a></li><li><a href="#the-hard-version-the-paragraph-that-breaks-never-names-what-you-changed">The hard version: the paragraph that breaks never names what you changed</a></li><li><a href="#the-graph">The graph</a></li><li><a href="#a-path-says-maybe-a-run-says-yes">A path says &quot;maybe&quot;. A run says &quot;yes&quot;.</a></li><li><a href="#an-agent-that-cant-make-things-up-and-remembers">An agent that can&#39;t make things up, and remembers</a></li><li><a href="#what-falkordb-taught-me">What FalkorDB taught me</a></li><li><a href="#the-day-i-learned-my-tool-was-wrong-four-times-out-of-five">The day I learned my tool was wrong four times out of five</a></li><li><a href="#built-in-public-in-four-days">Built in public, in four days</a></li><li><a href="#try-it">Try it</a></li><li><a href="#what-id-tell-you-if-youre-shipping-fast">What I&#39;d tell you if you&#39;re shipping fast</a></li></ol>
+    </nav>
+    <div class="prose">
+<figure class="code term"><figcaption>terminal</figcaption><pre><code>$ npx -y staleproof lint
+
+AI agent instructions
+
+  AGENTS.md
+    3:30  error    `start` is not a script in package.json.  [command-missing]
+    4:8  error    `typecheck` is not a script in package.json.  [command-missing]
+    5:50  error    The link target `src/components/Button.jsx` does not exist.  [link-broken]
+
+README and contributing guides
+
+  README.md
+    9:1  error    `start` is not a script in package.json.  [command-missing]
+    14:41  error    The link target `src/components/Button.jsx` does not exist.  [link-broken]
+
+5 errors in 2 files (3 files checked, 601 ms).</code></pre></figure>
+<p>My coding agent had just renamed two scripts and moved a component to TypeScript. The tests passed. CI was green.
+And five lines of documentation were now wrong, two of them in the <code>AGENTS.md</code> file the same agent reads at the start
+of every session.</p>
+<p>That&#39;s a demo repo I made for this post, but the pattern isn&#39;t made up. It&#39;s my week. I ship fast, mostly with AI
+agents, and the docs don&#39;t keep up: the code moves, the README stays where it was, and nobody notices until a user
+copies the quickstart and it fails on line two. I&#39;ve done this to my own users more than once. So for Graph Hacks I
+built the thing I wanted: <strong>Staleproof</strong>, an open-source agent that finds the docs a change makes false, proves it, and
+fixes them.</p>
+<figure class="code term"><figcaption>terminal</figcaption><pre><code>$ npx -y staleproof fix
+fixed  AGENTS.md:3:30  command-missing  Rename to `npm run dev` (renamed in package.json)
+fixed  AGENTS.md:4:8  command-missing  Rename to `npm run check` (renamed in package.json)
+fixed  AGENTS.md:5:50  link-broken  Rename to `src/components/Button.tsx` (renamed in this change)
+fixed  README.md:9:1  command-missing  Rename to `npm run dev` (renamed in package.json)
+fixed  README.md:14:41  link-broken  Rename to `src/components/Button.tsx` (renamed in this change)
+Fixed 5 findings in 2 files; 0 findings left.</code></pre></figure>
+<p>That part is a careful lint. The interesting part, and the reason this is a FalkorDB project, is the version of the
+problem a lint can&#39;t see.</p>
+<h2 id="docs-are-prompts-now"><a class="anchor" href="#docs-are-prompts-now" aria-hidden="true">#</a>Docs are prompts now</h2>
+<p>A year ago a stale README cost you a confused user. Today it also costs you a confused agent. <code>AGENTS.md</code>,
+<code>CLAUDE.md</code>, Cursor rules and Copilot instructions are read on every session, and an agent follows them more literally
+than any human would.</p>
+<p>When I ran Staleproof on popular open-source projects (more on that below), this is the kind of thing it found:</p>
+<ul>
+<li><code>huggingface_hub</code>&#39;s <code>AGENTS.md</code> tells coding agents to update <code>docs/sources/en/guides/cli.md</code>. The folder is
+<code>docs/source/en/guides</code>, no &quot;s&quot;. Every agent that follows the instruction goes looking for a directory that doesn&#39;t
+exist.</li>
+<li>The <code>AGENTS.md</code> template that <code>crewai create</code> copies into <strong>every new project</strong> imports <code>persist</code> from
+<code>crewai.flow.flow</code>, a module that doesn&#39;t export it. Every project starts with an agent file whose example raises
+<code>ImportError</code>.</li>
+</ul>
+<p>Stale docs used to be a papercut. When your docs are your agent&#39;s instructions, they&#39;re a bug.</p>
+<h2 id="the-hard-version-the-paragraph-that-breaks-never-names-what-you-changed"><a class="anchor" href="#the-hard-version-the-paragraph-that-breaks-never-names-what-you-changed" aria-hidden="true">#</a>The hard version: the paragraph that breaks never names what you changed</h2>
+<p>Here&#39;s a real pull request on FalkorDB&#39;s Python client:
+<a href="https://github.com/FalkorDB/falkordb-py/pull/262" rel="noopener">falkordb-py#262</a>. It changed one internal function, <code>Is_Cluster</code>.</p>
+<p>No doc mentions <code>Is_Cluster</code>. Search the docs for it and you get nothing. Code review sees a small fix to a private
+helper. And yet the README&#39;s async example was affected, because of this chain:</p>
+<figure class="path" aria-label="Evidence path from the changed function to the README example">
+  <div class="chips">
+    <div class="chip changed"><span class="k">changed in #262</span><code>Is_Cluster</code><span class="repo">falkordb-py</span></div>
+    <div class="arrow"><span>called by</span></div>
+    <div class="chip"><span class="k">symbol</span><code>FalkorDB.__init__</code><span class="repo">falkordb-py</span></div>
+    <div class="arrow"><span>used in</span></div>
+    <div class="chip doc"><span class="k">doc section</span><code>README › Asynchronous Example</code><span class="repo">falkordb-py</span></div>
+  </div>
+  <div class="runs">
+    <div class="run fail"><b>FAILS</b> before the PR · <code>TypeError: Redis.__init__() got an unexpected keyword argument 'himport_registry'</code></div>
+    <div class="run pass"><b>PASSES</b> after the PR · exit 0</div>
+  </div>
+  <figcaption>The path is the evidence: no doc names <code>Is_Cluster</code>, and the graph finds the paragraph anyway.</figcaption>
+</figure>
+<p>The README never names the function. It calls <code>FalkorDB()</code>, whose constructor calls the function you changed. That&#39;s
+the shape of almost every real docs break I&#39;ve seen, and it gets worse with more than one repository. A devtools
+company ships a client, an SDK that wraps the client, and a docs site that teaches the SDK. Change the client, and the
+tutorial that breaks is two repositories away, written against a function three calls up from the one in your diff.</p>
+<p>&quot;Is this paragraph affected by this change?&quot; isn&#39;t a text-similarity question. Embeddings won&#39;t answer it and grep
+can&#39;t. It&#39;s a <strong>reachability</strong> question: is there a path from the changed function, up through its callers, possibly
+in another repository, to a paragraph or a code example?</p>
+<p>That&#39;s a graph query. So I put everything in a graph.</p>
+<h2 id="the-graph"><a class="anchor" href="#the-graph" aria-hidden="true">#</a>The graph</h2>
+<p>Staleproof indexes every repository of an organisation into one FalkorDB graph:</p>
+<ul>
+<li><strong>Code.</strong> Python, TypeScript and Go functions, classes and methods become <code>Symbol</code> nodes. Calls become <code>CALLS</code> edges,
+resolved through imports, package re-exports, attribute types and return annotations, so <code>self._graph.query(...)</code>
+inside the GraphRAG SDK resolves to <code>AsyncGraph.query</code> in falkordb-py, another repository.</li>
+<li><strong>Docs.</strong> Markdown, MDX and Sphinx pages become <code>DocSection</code> nodes; every fenced example becomes a <code>CodeExample</code>
+linked to the symbols it calls (<code>USES</code>), resolved exactly like code. Prose mentions become <code>MENTIONS</code>; links between
+pages become <code>LINKS_TO</code>.</li>
+<li><strong>History and memory.</strong> Pull requests, example runs, the agent&#39;s verdicts, and maintainers&#39; decisions are nodes too.</li>
+</ul>
+<p>On FalkorDB&#39;s own three repositories (falkordb-py, GraphRAG-SDK and the docs site) that&#39;s 1,298 symbols, 3,138 doc
+sections, 1,835 code examples and 1,708 call edges, with 1,257 symbol-to-doc paths that cross a repository boundary.</p>
+<p>The impact of a pull request is then one query:</p>
+<figure class="code"><figcaption>Cypher</figcaption><pre><code>MATCH (pr:PullRequest {url: $pr})&lt;-[c:CHANGED_IN]-(s:Symbol)
+WHERE c.kind &lt;&gt; 'added'
+MATCH p = (s)&lt;-[:CALLS*0..3]-(t:Symbol)&lt;-[:MENTIONS|USES]-(d)
+WHERE (d:DocSection OR d:CodeExample) AND d.status = 'live'
+RETURN d.id, length(p) AS hops,
+       [n IN nodes(p) | coalesce(n.qualname, n.id)] AS evidence</code></pre></figure>
+<p>Two things I love about this. First, <strong>the path is the evidence</strong>. I don&#39;t just get &quot;this section might be affected&quot;;
+I get the chain of calls that connects it to the diff, and that chain is what the reviewer sees. Second, <strong>the absence
+of a path is evidence too</strong>. Changed code with no path to any doc is <em>cleared</em>: the agent can skip it with confidence,
+and the reviewer gets a grep command to double-check the claim.</p>
+<p>Here&#39;s what that buys you on FalkorDB&#39;s own pull requests. For each one, I compared the sections the graph reaches with
+what a reviewer can do without it, which is search the docs for the names of the changed functions:</p>
+<div class="table"><table><thead><tr><th></th><th style="text-align:right">Sections the graph reaches</th><th style="text-align:right">…that grep also finds</th><th style="text-align:right">grep matches that aren&#39;t affected</th></tr></thead><tbody><tr><td>4 pull requests, total</td><td style="text-align:right">120</td><td style="text-align:right">30</td><td style="text-align:right">227</td></tr><tr><td>the 3 falkordb-py pull requests</td><td style="text-align:right">47</td><td style="text-align:right"><strong>0</strong></td><td style="text-align:right">8</td></tr></tbody></table></div>
+<p>Grep misses three quarters of what matters and buries the rest in noise. On the client&#39;s own pull requests it finds
+none of it, because nobody writes <code>Cluster_Conn</code> or <code>_query</code> in a tutorial. They write <code>db.select_graph(...)</code> and
+<code>graph.query(...)</code>, which reach the changed code only through callers.</p>
+<p>Take FalkorDB out and Staleproof is that grep. That&#39;s the test I used for &quot;the graph has to do real work&quot;.</p>
+<h2 id="a-path-says-maybe-a-run-says-yes"><a class="anchor" href="#a-path-says-maybe-a-run-says-yes" aria-hidden="true">#</a>A path says &quot;maybe&quot;. A run says &quot;yes&quot;.</h2>
+<p>A path tells you a paragraph <em>might</em> be wrong. To prove it, Staleproof installs the repositories from source at the
+commit before the pull request and at the pull request, and runs the docs example at both, in a sandbox whose only
+reachable server is a scratch FalkorDB.</p>
+<ul>
+<li><strong>Passes before, fails after:</strong> the pull request broke the docs.</li>
+<li><strong>Fails before, passes after:</strong> the pull request fixed them. That&#39;s #262: the README&#39;s async example fails before
+the PR with <code>TypeError: Redis.__init__() got an unexpected keyword argument &#39;himport_registry&#39;</code> and passes after it.
+The PR fixed a docs example nobody knew was broken, and only the graph could connect the two.</li>
+<li><strong>Fails both times:</strong> already broken. <a href="https://github.com/FalkorDB/falkordb-py/pull/267" rel="noopener">falkordb-py#267</a> fixed the
+execution-plan parser; the path <code>ExecutionPlan._operation_tree ← ExecutionPlan.__init__ ← Graph.explain</code> crossed
+into the docs site&#39;s <code>GRAPH.EXPLAIN</code> page, whose example fails as written on a fresh server, before and after the PR:
+it explains a query on a graph the page never creates. Not this PR&#39;s fault. Still worth knowing.</li>
+</ul>
+<p>The biggest one, <a href="https://github.com/FalkorDB/falkordb-py/pull/276" rel="noopener">falkordb-py#276</a>, changed four asyncio symbols that
+reach <strong>43 doc sections, 41 of them in other repositories</strong>. Of the 21 reachable examples run at both commits, 10 pass
+both times, 6 were already broken, 3 can&#39;t even be installed together at those commits (GraphRAG-SDK 1.4.0 wants a
+newer falkordb-py than existed there), and 2 can&#39;t run as written.</p>
+<h2 id="an-agent-that-cant-make-things-up-and-remembers"><a class="anchor" href="#an-agent-that-cant-make-things-up-and-remembers" aria-hidden="true">#</a>An agent that can&#39;t make things up, and remembers</h2>
+<p>On top of the graph sits an agent. It gets eight tools, each a Cypher query (or a sandboxed run) over FalkorDB:
+<code>impact</code>, <code>clearance</code>, <code>read_section</code>, <code>run_example</code>, <code>decisions_for</code>, <code>rank_sections</code> (PageRank over the docs&#39; link
+graph, via <code>algo.pageRank</code>, so the most-read pages come first), <code>propose_edit</code> and <code>record_verdict</code>. Every tool call in
+the trace shows the Cypher it ran.</p>
+<p>Three rules make it trustworthy:</p>
+<ol>
+<li><strong>It can&#39;t edit a paragraph without a path.</strong> <code>propose_edit</code> refuses any section the graph doesn&#39;t connect to the
+change. The model can&#39;t hallucinate a docs fix for code it never reached.</li>
+<li><strong>It isn&#39;t done until every affected section has a verdict.</strong> Stale (with the edit), ok, governed by a decision, or
+skipped, always with a reason.</li>
+<li><strong>It remembers.</strong> Verdicts, runs and maintainers&#39; decisions are written back to the graph. A <code>Decision</code> node
+<code>GOVERNS</code> a symbol or a section, and a decision made on one function covers the docs of everything that calls it
+(<code>CALLS*0..2</code> then <code>GOVERNS</code>), with <code>SUPERSEDES</code> chains so the newest decision wins. When the agent checked #267 again, it
+called <code>decisions_for</code> before judging each section, and the graph answered: &quot;Earlier: ok on #267, ok on #276, ok on
+#262.&quot; The next pull request starts from what the last one learned.</li>
+</ol>
+<p>My favourite moment of the whole build came from rule 2. On #276, the docs&#39; UDF example passed before the PR and failed
+after it: a textbook &quot;this PR breaks the docs&quot; result. The agent&#39;s verdict disagreed. It called the failure &quot;a
+test-isolation artifact: the before run registered the &#39;StringUtils&#39; UDF in the shared scratch FalkorDB.&quot; It was right.
+<code>FLUSHALL</code> doesn&#39;t remove UDF libraries, so my sandbox wasn&#39;t as clean as I thought. The sandbox now also runs
+<code>GRAPH.UDF FLUSH</code>, and the example passes before and after. The agent caught my infrastructure lying to it.</p>
+<h2 id="what-falkordb-taught-me"><a class="anchor" href="#what-falkordb-taught-me" aria-hidden="true">#</a>What FalkorDB taught me</h2>
+<p>Leaning this hard on variable-length traversal finds the edges of the engine. Three things worth knowing if you build
+on FalkorDB:</p>
+<ul>
+<li><strong>A false proof of absence.</strong> On FalkorDB 4.18 (the version falkordblite bundles), the anonymous pattern
+<code>WHERE NOT (s)&lt;-[:CALLS*0..3]-(…)</code> missed callers reachable along two routes of different length, and &quot;proved&quot; a
+symbol undocumented when a doc was three calls away. Clearance now binds the path:
+<code>OPTIONAL MATCH p = … </code> and <code>count(p) = 0</code>. It&#39;s fixed in 4.22, but local and cloud disagreed until I noticed.</li>
+<li><strong>An exact-length traversal that returns nothing.</strong> On FalkorDB Cloud (4.22), <code>&lt;-[:R*2]-(t:Label)</code> returned no rows.
+It&#39;s already on the tracker as <a href="https://github.com/FalkorDB/FalkorDB/issues/2682" rel="noopener">FalkorDB#2682</a> (found there from a
+<code>WHERE</code> filter; I hit it from a label alone). Every query now binds its path and starts ranges at 0 or 1, and a test
+keeps it that way.</li>
+<li><strong><code>FLUSHALL</code> keeps UDFs.</strong> See above. <code>GRAPH.UDF FLUSH</code> is your friend.</li>
+</ul>
+<p>And the things that made it a joy: Cypher paths that come back as evidence, millisecond answers (a whole graph-mode
+check, five tools and thirteen queries, takes about a second on the free Cloud tier), <code>algo.pageRank</code> in the database,
+and many graphs on one instance. The hosted service keeps one graph per GitHub owner and one per GitHub App
+installation, and uses <code>GRAPH.MEMORY USAGE</code> to evict the least-recently-used ones inside the 100 MB free tier.</p>
+<h2 id="the-day-i-learned-my-tool-was-wrong-four-times-out-of-five"><a class="anchor" href="#the-day-i-learned-my-tool-was-wrong-four-times-out-of-five" aria-hidden="true">#</a>The day I learned my tool was wrong four times out of five</h2>
+<p>By the morning of the last day I had a tool I was proud of. I&#39;d tested it on 22 repositories, seen no false alarms
+at error level, and said so.</p>
+<p>Instead I did the thing I should have done first. I picked <strong>63 popular repositories Staleproof had never been tuned
+on</strong> (31 Python, 27 TypeScript, 5 Go; LangChain, Hugging Face, Gradio, Prefect, TanStack, FastAPI and friends), pinned
+each to a commit, ran it on 54,937 files, and checked every warning and error against the repository at that commit.</p>
+<p><strong>Version 0.6.1 was right 19% of the time.</strong> 1,255 real drifts, and 5,260 false positives.</p>
+<p>My 22-repository test had been a selection effect: repositories I&#39;d picked, with docs I&#39;d already learned to read. In
+the wild, docs sites serve pages in ways a repository doesn&#39;t show (their own heading slugs, site-root paths,
+generated API pages), TypeScript packages export through build output, and half of every big docs folder is release
+notes and migration guides that describe an API <em>on purpose</em> as it used to be.</p>
+<p>A docs checker that cries wolf gets uninstalled. So 0.8.0 made precision the product:</p>
+<ul>
+<li><strong>Rule maturity.</strong> A rule stays on by default only if it&#39;s right at least 80% of the time on those repositories.
+The rest still report, at info, but never fail a check or lower a score until a repository opts in.</li>
+<li><strong>Guards for every class of false positive</strong>, 14 classes in all: 2,504 false positives fixed outright, 2,718 moved
+to info.</li>
+<li><strong>A &quot;False positive?&quot; link on every finding</strong>, which opens a prefilled issue. Each report becomes a regression
+fixture.</li>
+</ul>
+<p>Because the guards were written against those 63 repositories, re-measuring on them would flatter me. So I ran <strong>18
+more repositories that weren&#39;t used for any tuning</strong>, linted them only after the guards were written, and checked
+every finding. <strong>33 of the 34 findings 0.8.0 shows by default were real drift</strong> (broken links 28 of 28, stale
+docstring parameters 5 of 5).</p>
+<p>The whole record, false positives included, is public in the <a href="https://staleproof.dev/#/drift">Drift Hall</a>. Some of
+what&#39;s in there:</p>
+<ul>
+<li>17 TanStack/table package READMEs link a <code>CONTRIBUTING.md</code> that only exists at the repository root.</li>
+<li>werkzeug documents <code>Headers.setlist(key, values)</code> with <code>:param value:</code>. The parameter is <code>values</code>.</li>
+<li>gemini-cli&#39;s docs link sections that were renamed when a page dropped its numbering.</li>
+<li>huggingface_hub&#39;s and crewAI&#39;s agent files, above.</li>
+</ul>
+<p>Across the 63, there was real drift in <strong>44</strong>. I&#39;ve drafted a small fix for each project; none are sent yet, because a
+fix PR to someone else&#39;s repository deserves a human reading it first.</p>
+<p>Publishing &quot;my tool was 19% precise&quot; during a hackathon felt terrible for about ten minutes. Then it felt like the
+most useful thing I&#39;d built all week.</p>
+<h2 id="built-in-public-in-four-days"><a class="anchor" href="#built-in-public-in-four-days" aria-hidden="true">#</a>Built in public, in four days</h2>
+<p>Graph Hacks ran October 15 to 18. Staleproof went from an empty folder to this:</p>
+<ul>
+<li><strong>Eight releases on npm in 36 hours</strong>, from 0.1.0 to 0.8.0. It was called Lockstep until day three.</li>
+<li><strong>A GitHub App</strong>: install it once, and every pull request gets a check that marks the docs it makes wrong, with
+suggested changes and an <strong>Apply fixes</strong> button. No workflow file, no secrets.</li>
+<li><strong>A GitHub Action</strong> that also runs your docs examples before and after each pull request, in your own CI.</li>
+<li><strong>An MCP server</strong> at <code>staleproof.dev/api/mcp</code>, so Claude, Cursor or VS Code can ask &quot;which docs can this change make
+false?&quot; before they commit.</li>
+<li><strong>A Claude Code plugin</strong> that tells Claude, after every edit, which docs and agent files it just made wrong, and
+asks it to fix them before it stops.</li>
+<li><strong>A VS Code and Cursor extension</strong>, pre-commit hooks, and <code>npx staleproof</code>.</li>
+<li><strong>A docs audit</strong> for any public repository, with a badge: paste one at
+<a href="https://staleproof.dev/#/audit">staleproof.dev/#/audit</a>.</li>
+</ul>
+<h2 id="try-it"><a class="anchor" href="#try-it" aria-hidden="true">#</a>Try it</h2>
+<p>In your own repository, no account, nothing leaves your machine:</p>
+<figure class="code term"><figcaption>shell</figcaption><pre><code>npx -y staleproof lint
+npx -y staleproof fix</code></pre></figure>
+<p>On every pull request: install the <a href="https://github.com/apps/staleproof" rel="noopener">GitHub App</a> or add the Action from
+<a href="https://staleproof.dev/#/install">staleproof.dev/#/install</a>.</p>
+<p>In your coding agent:</p>
+<figure class="code term"><figcaption>shell</figcaption><pre><code>claude mcp add --transport http staleproof https://staleproof.dev/api/mcp</code></pre></figure>
+<p>Or paste any public pull request at <a href="https://staleproof.dev">staleproof.dev</a> and watch the trace: every tool call and
+the Cypher it ran on FalkorDB.</p>
+<h2 id="what-id-tell-you-if-youre-shipping-fast"><a class="anchor" href="#what-id-tell-you-if-youre-shipping-fast" aria-hidden="true">#</a>What I&#39;d tell you if you&#39;re shipping fast</h2>
+<ol>
+<li><strong>Your docs are part of your build now.</strong> If an agent reads them, they&#39;re instructions. Lint them like code.</li>
+<li><strong>The bug is rarely where the name is.</strong> The paragraph that breaks calls something that calls something you
+changed. That&#39;s a graph, so query it like one.</li>
+<li><strong>A path is a claim; a run is a proof.</strong> Run the example before and after. &quot;Already broken&quot; is a finding too.</li>
+<li><strong>Measure on code you didn&#39;t choose.</strong> My own test set said &quot;no false alarms&quot;. Strangers&#39; code said 19%. Only one
+of those numbers was true, and publishing it made the tool better in a day.</li>
+</ol>
+<p>Staleproof is MIT-licensed and on GitHub at <a href="https://github.com/rajkaria/staleproof" rel="noopener">rajkaria/staleproof</a>. If it flags
+something that isn&#39;t real in your repository, click &quot;False positive?&quot;. That report becomes a test, and the next
+version is right where this one wasn&#39;t.</p>
+<hr>
+<p><em>Built for <a href="https://www.wemakedevs.org/hackathons/falkordb" rel="noopener">Graph Hacks</a> by WeMakeDevs × FalkorDB. I wrote Staleproof
+with Claude Code (Anthropic) as my coding assistant, including parallel agents for implementation, tests, docs and
+the first pass over the Drift Hall&#39;s findings, under my direction and review. Every number in this post comes from
+the repository&#39;s <a href="https://github.com/rajkaria/staleproof/blob/main/docs/FACTS.md" rel="noopener">FACTS.md</a> (generated from the graph)
+or the <a href="https://staleproof.dev/#/drift">Drift Hall</a>.</em></p>
+
+    </div>
+    <aside class="cta">
+      <h2>Try it on your repository</h2>
+      <p>No account, nothing leaves your machine.</p>
+      <pre><code>npx -y staleproof lint</code></pre>
+      <div class="cta-actions">
+        <a class="btn" href="/#/install">Install the GitHub App</a>
+        <a class="btn ghost" href="/#/try">Check a pull request</a>
+        <a class="btn ghost" href="https://github.com/rajkaria/staleproof">Star on GitHub</a>
+      </div>
+    </aside>
+  </article>
+</main>
+<footer class="site-footer">
+  <p><a class="brand" href="/"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#2a4fe6"/><path d="M10 6.5h8.5L24 12v13.5H10z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M18.5 6.5V12H24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M13 18.5l3 3 5.5-6" fill="none" stroke="#8ff2ff" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Staleproof</span></a></p>
+  <p>Docs that stay true to your code. Open source, MIT licensed, built on <a href="https://www.falkordb.com" rel="noopener">FalkorDB</a>.</p>
+</footer>
+</body>
+</html>

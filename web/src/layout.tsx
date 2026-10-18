@@ -242,6 +242,7 @@ export function Footer({ meta }: { meta?: ReactNode }) {
           <a href="#/audit">Audit a repository</a>
           <a href="#/install">Install</a>
           <a href="#/model">Graph model</a>
+          <a href="/blog/">Blog</a>
         </div>
         <div>
           <h4>Integrate</h4>
