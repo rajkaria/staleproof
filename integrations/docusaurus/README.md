@@ -4,8 +4,11 @@ A [Staleproof](https://staleproof.dev) "checked" stamp at the bottom of every do
 says what was checked against which commit and when, or how many references on the page are out
 of date.
 
+Not on npm yet. Copy this folder into the site (plain JavaScript, nothing to build) and install it from there:
+
 ```bash
-npm install docusaurus-plugin-staleproof
+npx degit rajkaria/staleproof/integrations/docusaurus plugins/docusaurus-plugin-staleproof
+npm install ./plugins/docusaurus-plugin-staleproof
 ```
 
 ```js

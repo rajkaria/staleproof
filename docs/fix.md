@@ -1,6 +1,6 @@
 # Fix stale docs
 
-Staleproof does not only flag a stale docs reference: when the right answer is unambiguous it proposes the edit, re-checks it, and applies it. `staleproof fix` rewrites the files; pull requests get one-click GitHub suggestions; `mode: fix` in the GitHub Action keeps one weekly pull request with every fix (Renovate for docs). A fix is applied only when it is **verified**: Staleproof applies it in a mirror of the repository, lints again, and keeps it only if its finding is gone and no new finding appeared anywhere.
+Staleproof does not only flag a stale docs reference: when the right answer is unambiguous it proposes the edit, re-checks it, and applies it. `staleproof fix` rewrites the files; pull requests get one-click GitHub suggestions, and with the [GitHub App](github-app.md#fixes) an **Apply fixes** button for the fixes outside the diff; `mode: fix` in the GitHub Action keeps one weekly pull request with every fix (Renovate for docs). A fix is applied only when it is **verified**: Staleproof applies it in a mirror of the repository, lints again, and keeps it only if its finding is gone and no new finding appeared anywhere.
 
 ## Fix the working tree
 
@@ -63,7 +63,7 @@ Run `npm run docs:lint` before pushing.
 ```
 ````
 
-One review per push. A suggestion already posted on the same lines is updated (or left when it says the same); one whose lines changed since is left as it is; nothing is posted twice. Fixes outside the diff (the untouched README line that still runs the old script) are listed at the end of the comment with `npx staleproof fix`. Turn suggestions off with `suggestions: false`. From the command line: `staleproof suggest <pr-url>` ([CLI](cli.md#suggest)).
+One review per push. A suggestion already posted on the same lines is updated (or left when it says the same); one whose lines changed since is left as it is; nothing is posted twice. When both the Action and the GitHub App check a repository, a suggestion the other one already posted for the same findings, on the same lines and with the same text, counts as already there and is left alone; a person's comment never counts, even one that copies a suggestion. Fixes outside the diff (the untouched README line that still runs the old script) are listed at the end of the comment with `npx staleproof fix`. Turn suggestions off with `suggestions: false`. From the command line: `staleproof suggest <pr-url>` ([CLI](cli.md#suggest)).
 
 ## A weekly fix pull request
 
@@ -94,7 +94,7 @@ Run it locally with `staleproof fix-pr <owner/name>` ([CLI](cli.md#fix-pr)).
 
 ## In your editor and your coding agent
 
-The [VS Code extension and language server](editors.md) offers each verified fix as a quick fix, and the [Claude Code plugin](claude-code.md) adds `Fix: …` to the docs it tells Claude an edit made wrong, so the agent applies it in the same change.
+The [VS Code and Cursor extension](editors.md) (`staleproof.staleproof` on the Visual Studio Marketplace and Open VSX) and the language server behind it offer each verified fix as a quick fix, and the [Claude Code plugin](claude-code.md) adds `Fix: …` to the docs it tells Claude an edit made wrong, so the agent applies it in the same change.
 
 ## Related
 

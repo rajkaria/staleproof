@@ -94,6 +94,8 @@ jobs:
 
 **What you get.** A comment that starts with the hidden marker `<!-- staleproof -->`, titled with what broke (`this pull request breaks 1 docs example`, or how many sections it can make false), the examples table, the docs it can make false with the path for each, and the graph name and commits compared at the end. The same report goes to the job summary. [GitHub Action](github-action.md#the-comment) shows the full format.
 
+**No workflow file.** The [GitHub App](github-app.md) gives the same review without YAML, on public and private repositories: a **Staleproof** check run with the docs references the pull request makes wrong as annotations, the comment when there is something to say, each verified fix inside the diff as a suggestion, and an **Apply fixes** button for the rest. It runs no examples; keep the Action for the before and after runs. The two can run together without posting the same suggestion twice.
+
 **Limits.**
 
 - The action has run end to end on a private test repository with the one-click workflow (no inputs).
@@ -164,6 +166,8 @@ As a pre-push hook that stops the push when an example is predicted to break:
 ```bash
 printf '#!/bin/sh\nnpx -y staleproof check --fail-on-predicted\n' > .git/hooks/pre-push && chmod +x .git/hooks/pre-push
 ```
+
+With no graph at all, in a second: `npx -y staleproof lint --new` lists the docs references your changes make wrong in the docs, READMEs and agent files (a renamed script the README still runs, a moved file `AGENTS.md` still names), and `npx -y staleproof fix` applies the fixes it can verify. The [pre-commit hook](pre-commit.md) runs the same lint on every commit, and the [VS Code and Cursor extension](editors.md) shows it as you type.
 
 **What you get.** The impacted sections with their evidence paths, then the examples predicted to break, each with its line and the reason, for example:
 
@@ -245,6 +249,8 @@ Prompts to try, after pushing your branch and opening the pull request:
 - `check_changes` is static: it predicts breaks and runs nothing.
 - The hosted server cannot read your disk: send `files` with `repo`. It reads public repositories only.
 - The rules are instructions to the agent, not enforcement; pair them with the [pre-push hook](#developers-before-they-push) or the GitHub Action.
+
+**In Claude Code, with no MCP server.** The [Claude Code plugin](claude-code.md) (`/plugin marketplace add rajkaria/staleproof`, then `/plugin install staleproof@staleproof`) needs no rules in `AGENTS.md`: after each edit Claude hears which docs and agent files the edit made wrong, with the verified fix when there is one, and before it stops it is asked to fix them, once. It reads the checkout and git only. In Cursor, `npx -y staleproof init --cursor` writes the same hooks.
 
 ## Platform teams with many repositories or organisations
 

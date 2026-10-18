@@ -74,7 +74,12 @@ export interface AuditData {
   deductions: Deduction[];
   examples: { total: number; python: number; linked: number; mismatched: number };
   mismatches: AuditMismatch[];
-  coverage: { api: number; documented: number; percent: number };
+  /**
+   * `percent` is 0 when `api` is 0: then `unmeasured` says why nothing was measured (no public
+   * symbols at all; a TS/JS package whose entry points map to no source file), and the score
+   * takes no coverage deduction.
+   */
+  coverage: { api: number; documented: number; percent: number; unmeasured?: 'no-api' | 'js-entry-points' };
   /** Public API no doc names or calls, most used first (top `limit`). */
   undocumented: UndocumentedSymbol[];
   /** Latest recorded run of each example at the indexed commits. */
@@ -195,15 +200,32 @@ export function scoreAudit(
   return { score, grade, deductions };
 }
 
+/** The audit's sentence about examples: never "All 0" when no example calls the code. */
+export function examplesSentence(d: Pick<AuditData, 'examples' | 'mismatches'>): string {
+  const { linked, mismatched, total } = d.examples;
+  if (mismatched) return `${mismatched} of ${linked} examples that call the code no longer fit it (${d.mismatches.length} line${d.mismatches.length === 1 ? '' : 's'}).`;
+  if (!linked) return total ? `No docs example calls the code (${total} example${total === 1 ? '' : 's'} read), so none was checked against it.` : 'The docs have no code examples to check.';
+  return linked === 1 ? 'The 1 example that calls the code fits it.' : `All ${linked} examples that call the code fit it.`;
+}
+
+/** Why API coverage was not measured, when the public API is empty (the reports print this instead of a percentage). */
+export function unmeasuredReason(c: AuditData['coverage']): string | undefined {
+  if (c.api > 0) return undefined;
+  return c.unmeasured === 'js-entry-points'
+    ? "Staleproof found no exported symbols, because it could not map the TypeScript/JavaScript package's entry points (package.json main, module, exports) to source files."
+    : 'Staleproof found no exported symbols in the indexed code.';
+}
+
+/** The audit's sentence about API coverage: a measured share, or plainly that nothing could be measured (never 100% of nothing). */
+export function coverageSentence(d: Pick<AuditData, 'coverage'>): string {
+  const c = d.coverage;
+  if (c.api > 0) return `${c.documented} of ${c.api} public symbols (${c.percent}%) are named or called by a doc.`;
+  return `API coverage is not measured: ${unmeasuredReason(c)}`;
+}
+
 export function auditSummary(d: AuditData): string {
   const scope = d.repos.length === 1 ? d.repos[0]!.name : `${d.repos.length} repositories`;
-  const parts = [
-    `Docs health ${d.score}/100 (${d.grade}) for ${scope}.`,
-    d.examples.mismatched
-      ? `${d.examples.mismatched} of ${d.examples.linked} examples that call the code no longer fit it (${d.mismatches.length} line${d.mismatches.length === 1 ? '' : 's'}).`
-      : `All ${d.examples.linked} examples that call the code fit it.`,
-    `${d.coverage.documented} of ${d.coverage.api} public symbols (${d.coverage.percent}%) are named or called by a doc.`,
-  ];
+  const parts = [`Docs health ${d.score}/100 (${d.grade}) for ${scope}.`, examplesSentence(d), coverageSentence(d)];
   const ran = d.runCounts.pass + d.runCounts.fail;
   if (ran) parts.push(`${d.runCounts.fail} of ${ran} examples run at the indexed commits fail.`);
   if (d.findings?.length) {
@@ -216,6 +238,8 @@ export function auditSummary(d: AuditData): string {
   } else if (d.findings && d.repos.some((r) => r.findingsChecked)) {
     parts.push('Every docs reference lint checks (paths, links, commands, env vars) matches the repository.');
   }
+  // Nothing about the code was measured: say what the number is made of.
+  if (!d.coverage.api && !d.examples.linked && !(d.runCounts.pass + d.runCounts.fail)) parts.push('The score counts the docs references only.');
   if (d.outdatedIndex) parts.push('Indexed by an older Staleproof: examples are not checked against the code until the repositories are indexed again (staleproof index).');
   return parts.join(' ');
 }
@@ -343,7 +367,11 @@ export async function auditDocs(ctx: ToolContext, opts: AuditOptions = {}): Prom
   );
   for (const s of api) if (s.docs === 0 && s.kind === 'class' && withDocumentedMembers.has(`${s.repo}:${s.qualname}`)) s.docs = 1;
   const documented = api.filter((s) => s.docs > 0).length;
-  const coverage = { api: api.length, documented, percent: api.length ? Math.round((documented / api.length) * 1000) / 10 : 100 };
+  // Nothing to measure is not 100% covered: the reports say why, and the score takes no deduction.
+  const jsOnly = examples.some((e) => JS_LANGS.has(e.lang)) && !examples.some((e) => e.lang === 'python');
+  const coverage: AuditData['coverage'] = api.length
+    ? { api: api.length, documented, percent: Math.round((documented / api.length) * 1000) / 10 }
+    : { api: 0, documented: 0, percent: 0, unmeasured: jsOnly ? 'js-entry-points' : 'no-api' };
   const blob = (r: SymRow) => `https://github.com/${r.repo}/blob/${shas.get(r.repo) ?? 'HEAD'}/${r.path}#L${r.lineno}`;
   const undocumented = api
     .filter((s) => s.docs === 0)

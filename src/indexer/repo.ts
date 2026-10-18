@@ -202,6 +202,13 @@ export function pythonSourceRoots(paths: string[]): string[] {
 
 const TRANSLATED_README = /(^|\/)(README|CONTRIBUTING|index)[._-](ar|bn|cs|de|es|fa|fr|he|hi|id|it|ja|jp|ko|kr|nl|pl|pt|pt[-_]br|ru|th|tr|uk|ua|vi|zh|zh[-_](cn|tw|hans|hant))\.(md|mdx|rst)$/i;
 const VERSIONED = /^(.+?)[-_.](v\d+(\.\d+)*|\d+\.x)$/i;
+/** A page whose job is an earlier API: a migration or upgrade guide (`migrating-to-v4.md`, `upgrade-guide.mdx`). */
+const EARLIER_API_PAGE = /(^|\/)[^/]*(migrat|upgrad)[^/]*\.(md|mdx|rst|markdown)$/i;
+/**
+ * A folder of docs for earlier versions (`previous-versions/`, `legacy/`). Not `migrations/`: that is usually a
+ * database's (agno's `libs/agno/migrations/README.md`); migration guides are matched by their page name.
+ */
+const EARLIER_API_DIR = /^(previous[-_]versions?|older?[-_]versions?|legacy|archived?)$/i;
 
 /** Every directory of a file list (each file's folder and its ancestors). */
 export function directoriesOf(paths: string[]): Set<string> {
@@ -217,10 +224,10 @@ export function directoriesOf(paths: string[]): Set<string> {
  * `README.zh-CN.md`) is maintained apart from its source.
  */
 export function olderOrTranslatedDocs(path: string, dirs: Set<string>): boolean {
-  if (TRANSLATED_README.test(path)) return true;
+  if (TRANSLATED_README.test(path) || EARLIER_API_PAGE.test(path)) return true;
   const parts = path.split('/');
   for (let i = 0; i < parts.length - 1; i++) {
-    if (parts[i] === 'versioned_docs') return true;
+    if (parts[i] === 'versioned_docs' || EARLIER_API_DIR.test(parts[i]!)) return true;
     const m = VERSIONED.exec(parts[i]!);
     if (m && dirs.has([...parts.slice(0, i), m[1]!].join('/'))) return true;
   }

@@ -27,8 +27,11 @@ The repository must have been audited once on the server: open `https://stalepro
 
 ### Docusaurus
 
+The plugin is not on npm yet. Copy it from this repository's [`integrations/docusaurus`](../integrations/docusaurus) into the site (it is plain JavaScript, nothing to build) and install it from there, so the name below resolves:
+
 ```bash
-npm install docusaurus-plugin-staleproof
+npx degit rajkaria/staleproof/integrations/docusaurus plugins/docusaurus-plugin-staleproof
+npm install ./plugins/docusaurus-plugin-staleproof
 ```
 
 ```js
@@ -42,8 +45,10 @@ The plugin loads the stamp script on every page, adds `<meta name="staleproof:so
 
 ### MkDocs
 
+The plugin is not on PyPI yet; pip installs it from this repository's [`integrations/mkdocs`](../integrations/mkdocs):
+
 ```bash
-pip install mkdocs-staleproof
+pip install "mkdocs-staleproof @ git+https://github.com/rajkaria/staleproof#subdirectory=integrations/mkdocs"
 ```
 
 ```yaml

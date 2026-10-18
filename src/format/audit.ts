@@ -1,4 +1,4 @@
-import type { AuditData, AuditFinding } from '../audit.js';
+import { examplesSentence, unmeasuredReason, type AuditData, type AuditFinding } from '../audit.js';
 import { MISMATCH_LABEL } from '../indexer/signature.js';
 import { SURFACE_TITLE } from '../lint/format.js';
 import { bold, cyan, dim, green, red, yellow } from './text.js';
@@ -61,8 +61,14 @@ export function auditText(d: AuditData, summary: string): string {
   } else if (d.findings && d.repos.some((r) => r.findingsChecked)) {
     out.push(bold('Docs references'), dim('  every path, link, anchor, command and env var the docs and AI agent files name matches the repository'), '');
   }
-  out.push(bold(`Examples that no longer fit the code (${d.examples.mismatched} examples, ${d.mismatches.length} lines)`));
-  if (!d.mismatches.length) out.push(dim('  none found: every call in an example fits the signature it reaches'));
+  if (!d.examples.linked) {
+    // No example calls the code: nothing was checked, which is not the same as nothing wrong.
+    const total = d.examples.total;
+    out.push(bold('Examples that no longer fit the code'), dim(`  none checked: ${total ? `no docs example calls the code (${total} example${total === 1 ? '' : 's'} read)` : 'the docs have no code examples'}`));
+  } else {
+    out.push(bold(`Examples that no longer fit the code (${d.examples.mismatched} examples, ${d.mismatches.length} lines)`));
+    if (!d.mismatches.length) out.push(dim('  none found: every call in an example fits the signature it reaches'));
+  }
   for (const m of d.mismatches) {
     out.push(`  ${red('✗')} ${cyan(shortExample(m.example))} ${dim(`line ${m.line} · ${m.repo}`)}`);
     out.push(`    ${m.detail} ${dim(`(${MISMATCH_LABEL[m.kind]}; ${m.call})`)}`);
@@ -73,7 +79,9 @@ export function auditText(d: AuditData, summary: string): string {
     for (const r of d.runs.filter((x) => x.status === 'fail' || x.status === 'timeout')) out.push(`  ${red('FAIL')} ${shortExample(r.example)} ${dim(r.error || r.reason)}`);
     out.push('');
   }
-  out.push(bold(`API coverage: ${d.coverage.documented} of ${d.coverage.api} public symbols (${d.coverage.percent}%) named or called by a doc`));
+  const unmeasured = unmeasuredReason(d.coverage);
+  if (unmeasured) out.push(bold('API coverage: not measured'), dim(`  ${unmeasured}`));
+  else out.push(bold(`API coverage: ${d.coverage.documented} of ${d.coverage.api} public symbols (${d.coverage.percent}%) named or called by a doc`));
   if (d.undocumented.length) out.push(dim('  Undocumented, most used first:'));
   for (const u of d.undocumented) {
     out.push(`  ${yellow('·')} ${u.qualname} ${dim(`${u.kind} · ${u.callers} callers${u.crossRepoCallers ? ` (${u.crossRepoCallers} other repos)` : ''} · ${u.repo}`)}`);
@@ -121,8 +129,10 @@ export function auditMarkdown(d: AuditData, summary: string): string {
       out.push(`| [${esc(shortExample(m.example))} line ${m.line}](${m.url}) | ${esc(m.heading)} | \`${esc(m.call)}\` | ${esc(m.detail)} |`);
     }
     out.push('');
+  } else if (!d.examples.linked) {
+    out.push(examplesSentence(d), '');
   } else {
-    out.push(`Every call in the ${d.examples.linked} examples that use the code fits the signature it reaches.`, '');
+    out.push(`Every call in the ${d.examples.linked} example${d.examples.linked === 1 ? '' : 's'} that use${d.examples.linked === 1 ? 's' : ''} the code fits the signature it reaches.`, '');
   }
   const failing = d.runs.filter((r) => r.status === 'fail' || r.status === 'timeout');
   if (failing.length) {
@@ -130,7 +140,9 @@ export function auditMarkdown(d: AuditData, summary: string): string {
     for (const r of failing) out.push(`| [${esc(shortExample(r.example))}](${r.url}) | \`${esc((r.error || r.reason).slice(0, 160))}\` |`);
     out.push('');
   }
-  out.push(`#### API coverage: ${d.coverage.percent}% (${d.coverage.documented} of ${d.coverage.api} public symbols)`, '');
+  const unmeasured = unmeasuredReason(d.coverage);
+  if (unmeasured) out.push('#### API coverage: not measured', '', `${unmeasured} The score takes no coverage deduction.`, '');
+  else out.push(`#### API coverage: ${d.coverage.percent}% (${d.coverage.documented} of ${d.coverage.api} public symbols)`, '');
   if (d.undocumented.length) {
     out.push(`<details><summary>${d.coverage.api - d.coverage.documented} public symbols no doc names or calls — the ${d.undocumented.length} most used</summary>`, '', '| Symbol | Kind | Callers |', '|---|---|---:|');
     for (const u of d.undocumented) {
@@ -142,6 +154,6 @@ export function auditMarkdown(d: AuditData, summary: string): string {
   out.push(`<sub>[Staleproof](${REPO_URL}) · FalkorDB graph \`${d.org}\` · ${d.repos.map((r) => `${r.name}@${(r.sha ?? '').slice(0, 7)}`).join(', ')}</sub>`);
   // Machine-readable counts: the docs references on their own line, so the audit line keeps its shape.
   if (d.findings) out.push(`<!-- staleproof:audit-findings findings=${findings.length} errors=${d.findingCounts?.errors ?? 0} warnings=${d.findingCounts?.warnings ?? 0} -->`);
-  out.push(`<!-- staleproof:audit score=${d.score} mismatched=${d.examples.mismatched} failing=${d.runCounts.fail} coverage=${d.coverage.percent} -->`);
+  out.push(`<!-- staleproof:audit score=${d.score} mismatched=${d.examples.mismatched} failing=${d.runCounts.fail} coverage=${d.coverage.api ? d.coverage.percent : 'none'} -->`);
   return out.join('\n');
 }

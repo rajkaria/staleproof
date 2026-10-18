@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.7.0 — 2026-10-18
+
+The first run on a repository Staleproof has never seen says only what is so, in fewer words; one install button.
+
+- **Links read whole**: a link whose destination is in angle brackets, or contains balanced parentheses, is read as
+  CommonMark reads it: `[…](<#using-scoped-(non-global)-store>)` is no longer cut at the first `)` and reported as a
+  missing anchor. Reference definitions and HTML `href`/`src` values keep their spaces, parentheses and the other kind
+  of quote. The docs link graph the indexer ranks pages by reads links the same way.
+- **Anchors under another docs site's style**: when a link's anchor names a heading that is on the page with its
+  punctuation kept (`#i’ve-updated-the-state,-but…`), Staleproof says the heading exists, gives its GitHub anchor and
+  offers it as a verified fix, at info severity, so it never lowers the audit score or fails a check.
+- **Audit wording**: the audit no longer says "All 0 examples that call the code fit it" or "0 of 0 public symbols
+  (100%)". It says no docs example calls the code, and that API coverage is not measured (for a TypeScript or
+  JavaScript package, because its entry points could not be mapped to source files), and takes no coverage deduction.
+- **One-line all-clear**: a pull request check that finds nothing says so in one line, for example "All clear: the 4
+  changed symbols reach no docs, and no docs reference became wrong.", in the comment, the check run, the web view,
+  the terminal and MCP `check_changes`. The cleared symbols and the commands to check them stay below it, collapsed.
+- **TypeScript and JavaScript packages built before publishing**: `package.json` entry points that are build output
+  not in the repository are mapped back to their source (`src/`, `source/`, the same file name), and a private
+  package that declares library entry points, like zustand or valtio, is indexed. ky's modules no longer carry
+  `source.` in their names.
+- **Earlier APIs on purpose**: examples on migration and upgrade guides and in `previous-versions/`, `migrations/` or
+  `legacy/` folders are not judged against today's code.
+- **App and Action together**: when both check a repository, a suggestion one of them already posted (same findings,
+  same lines, same text) is not posted again by the other. A person's comment is never taken for Staleproof's, even
+  an exact copy; with a personal `github-token`, the Action still updates its own earlier suggestions.
+- **Install page**: one primary button, Install the GitHub App; then the Action (the way to run docs examples today);
+  then "More ways": the VS Code and Cursor extension, the Claude Code plugin, MCP, the CLI, pre-commit and
+  `npx staleproof init`. The home page says Staleproof also checks the files AI coding agents read.
+- **Docs**: the docs, README and VISION cover everything live: the GitHub App with Apply fixes, the Action on the
+  GitHub Marketplace, the extension on the Visual Studio Marketplace and Open VSX, the Claude Code plugin,
+  pre-commit, fix pull requests (and the repository setting they need), the checked stamp and the release gate. The
+  Docusaurus and MkDocs stamp plugins install from the repository until they are on npm and PyPI.
+- Every pinned version (Action default, Claude Code plugin, docs) is 0.7.0.
+
 ## 0.6.1 — 2026-10-18
 
 What `staleproof init` writes catches up with what is live, and the pull request report says less that is not so.

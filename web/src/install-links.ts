@@ -54,6 +54,35 @@ export function newWorkflowUrl(repo: string, branch: string, yaml: string): stri
   return `https://github.com/${repo}/new/${encodeURIComponent(branch)}?filename=${encodeURIComponent(WORKFLOW_PATH)}&value=${encodeURIComponent(yaml)}`;
 }
 
+/** staleproof.dev's GitHub App (github.com/apps/staleproof). */
+export const PUBLIC_APP_INSTALL_URL = 'https://github.com/apps/staleproof/installations/new';
+
+/**
+ * The install page's primary button: the App, when this server has one. Before /api/health
+ * answers (and on a host whose health never loads) the page assumes staleproof.dev's App, so the
+ * primary call to action does not jump from the Action to the App a moment after the page opens.
+ */
+export function appInstallUrl(health?: { githubApp?: { enabled: boolean; installUrl?: string } }): string | undefined {
+  if (!health) return PUBLIC_APP_INSTALL_URL;
+  return health.githubApp?.enabled ? health.githubApp.installUrl : undefined;
+}
+
+/** The VS Code / Cursor extension (editors/vscode), on both registries. */
+export const EXTENSION_ID = 'staleproof.staleproof';
+export const EXTENSION_LINKS = {
+  marketplace: `https://marketplace.visualstudio.com/items?itemName=${EXTENSION_ID}`,
+  openVsx: `https://open-vsx.org/extension/${EXTENSION_ID.replace('.', '/')}`,
+  command: `code --install-extension ${EXTENSION_ID}`,
+};
+
+/** The Claude Code plugin, from this repository's marketplace (docs/claude-code.md). */
+export const CLAUDE_PLUGIN_COMMANDS = ['/plugin marketplace add rajkaria/staleproof', '/plugin install staleproof@staleproof'];
+
+/** The `.pre-commit-config.yaml` entry (docs/pre-commit.md), pinned to a release tag. */
+export function preCommitYaml(version: string): string {
+  return ['repos:', `  - repo: ${REPO_URL}`, `    rev: v${version.replace(/^v/, '')}`, '    hooks:', '      - id: staleproof', ''].join('\n');
+}
+
 export function mcpLinks(url: string) {
   const b64 = btoa(JSON.stringify({ url }));
   return {

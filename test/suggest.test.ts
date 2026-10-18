@@ -181,6 +181,82 @@ describe('postSuggestions', () => {
     expect(gh2.state.reviewComments[0]!.body).toContain('fake');
   });
 
+  it('the App after the Action: the Action\'s identical suggestions count as already there, nothing is posted twice', async () => {
+    const action = fakeGitHub('acme/app', 'github-actions[bot]');
+    const first = await postSuggestions(plan(lintDocs, checkDocs), PR, { token: 't', fetchImpl: action.fetch });
+    expect(first).toMatchObject({ created: 2 });
+    // The App sees the same pull request with its own identity.
+    const app = fakeGitHub('acme/app', 'staleproof[bot]');
+    app.state.reviewComments.push(...action.state.reviewComments);
+    const second = await postSuggestions(plan(lintDocs, checkDocs), PR, { token: 't', fetchImpl: app.fetch, author: 'staleproof[bot]' });
+    expect(second).toEqual({ created: 0, updated: 0, unchanged: 2, superseded: 0, skipped: 0 });
+    expect(app.writes()).toEqual([]);
+    expect(app.state.reviewComments).toHaveLength(2);
+  });
+
+  it('the Action after the App: the App\'s identical suggestions count as already there', async () => {
+    const app = fakeGitHub('acme/app', 'staleproof[bot]');
+    await postSuggestions(plan(lintDocs), PR, { token: 't', fetchImpl: app.fetch, author: 'staleproof[bot]' });
+    const action = fakeGitHub('acme/app', 'github-actions[bot]');
+    action.state.reviewComments.push(...app.state.reviewComments);
+    expect(await postSuggestions(plan(lintDocs), PR, { token: 't', fetchImpl: action.fetch })).toMatchObject({ created: 0, unchanged: 1 });
+    expect(action.writes()).toEqual([]);
+  });
+
+  it('another Staleproof account\'s suggestion counts only when fingerprints, lines and body all match; it is never edited', async () => {
+    const action = fakeGitHub('acme/app', 'github-actions[bot]');
+    await postSuggestions(plan(lintDocs), PR, { token: 't', fetchImpl: action.fetch });
+    const other = action.state.reviewComments[0]!;
+    const variants: [string, Partial<typeof other>][] = [
+      ['another line', { line: 2 }],
+      ['another range', { start_line: 2 }],
+      ['another body', { body: other.body.replace('docs:lint', 'docs:check') }],
+      ['another finding', { body: other.body.replace('fp=aaaa000000000001', 'fp=aaaa000000000009') }],
+      ['outdated', { line: null }],
+    ];
+    for (const [name, change] of variants) {
+      const app = fakeGitHub('acme/app', 'staleproof[bot]');
+      app.state.reviewComments.push({ ...other, ...change });
+      const r = await postSuggestions(plan(lintDocs), PR, { token: 't', fetchImpl: app.fetch, author: 'staleproof[bot]' });
+      expect(r, name).toMatchObject({ created: 1, updated: 0, unchanged: 0, superseded: 0 });
+      // The other account's comment is left exactly as it was.
+      expect(app.writes().filter((c) => c.method === 'PATCH'), name).toEqual([]);
+      expect(app.state.reviewComments[0], name).toEqual({ ...other, ...change });
+    }
+  });
+
+  it('never treats a person\'s comment as Staleproof\'s, even a word-for-word copy of the suggestion', async () => {
+    const bot = fakeGitHub('acme/app', 'github-actions[bot]');
+    await postSuggestions(plan(lintDocs), PR, { token: 't', fetchImpl: bot.fetch });
+    const copy = { ...bot.state.reviewComments[0]!, user: { login: 'octocat' } };
+    for (const author of [undefined, 'staleproof[bot]']) {
+      const gh = fakeGitHub('acme/app', author ?? 'github-actions[bot]');
+      gh.state.reviewComments.push({ ...copy });
+      const r = await postSuggestions(plan(lintDocs), PR, { token: 't', fetchImpl: gh.fetch, ...(author ? { author } : {}) });
+      expect(r, String(author)).toMatchObject({ created: 1, unchanged: 0, updated: 0, superseded: 0 });
+      expect(gh.writes().filter((c) => c.method === 'PATCH'), String(author)).toEqual([]);
+      expect(gh.state.reviewComments[0], String(author)).toEqual(copy);
+    }
+  });
+
+  it("with a person's own token (the Action's github-token), that person's earlier suggestions are its own; other people's never count", async () => {
+    const gh = fakeGitHub('acme/app', 'octocat');
+    // GITHUB_TOKEN and installation tokens cannot read GET /user; a personal token can.
+    const asOctocat: typeof fetch = async (input, init) =>
+      new URL(String(input)).pathname === '/user' ? new Response(JSON.stringify({ login: 'octocat', type: 'User' }), { status: 200 }) : gh.fetch(input, init);
+    expect(await postSuggestions(plan(lintDocs), PR, { token: 't', fetchImpl: asOctocat })).toMatchObject({ created: 1 });
+    expect(await postSuggestions(plan(lintDocs), PR, { token: 't', fetchImpl: asOctocat })).toMatchObject({ created: 0, unchanged: 1 });
+    const changed = finding('aaaa000000000001', 3, [{ line: 3, column: 14, endLine: 3, endColumn: 23, newText: 'docs:check' }]);
+    expect(await postSuggestions(plan(changed), { ...PR, headSha: 'beef' }, { token: 't', fetchImpl: asOctocat })).toMatchObject({ created: 0, updated: 1 });
+    expect(gh.state.reviews).toHaveLength(1);
+    // Someone else's word-for-word copy, with the same personal token: ignored, so the suggestion is posted.
+    const other = fakeGitHub('acme/app', 'octocat');
+    other.state.reviewComments.push({ ...gh.state.reviewComments[0]!, user: { login: 'someone' } });
+    const asOctocat2: typeof fetch = async (input, init) =>
+      new URL(String(input)).pathname === '/user' ? new Response(JSON.stringify({ login: 'octocat' }), { status: 200 }) : other.fetch(input, init);
+    expect(await postSuggestions(plan(changed), PR, { token: 't', fetchImpl: asOctocat2 })).toMatchObject({ created: 1, unchanged: 0, updated: 0 });
+  });
+
   it('posts nothing for an empty plan', async () => {
     const gh = fakeGitHub();
     expect(await postSuggestions({ comments: [], outside: [] }, PR, { token: 't', fetchImpl: gh.fetch })).toEqual({ created: 0, updated: 0, unchanged: 0, superseded: 0, skipped: 0 });

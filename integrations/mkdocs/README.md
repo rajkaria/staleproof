@@ -4,8 +4,10 @@ A [Staleproof](https://staleproof.dev) "checked" stamp on every MkDocs page: one
 title that says what was checked against which commit and when, or how many references on the
 page are out of date.
 
+Not on PyPI yet; pip installs it from the repository:
+
 ```bash
-pip install mkdocs-staleproof
+pip install "mkdocs-staleproof @ git+https://github.com/rajkaria/staleproof#subdirectory=integrations/mkdocs"
 ```
 
 ```yaml

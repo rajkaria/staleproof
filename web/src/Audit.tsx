@@ -6,6 +6,17 @@ import { repoFromInput } from './install-links';
 import { findingGroups, type WebFinding } from './CheckResults';
 import type { AuditData, Health } from './types';
 
+/** Why API coverage was not measured (src/audit.ts `coverage.unmeasured`, 0.7): absent on older servers. */
+type Coverage = AuditData['coverage'] & { unmeasured?: 'no-api' | 'js-entry-points' };
+
+/** The audit's plain sentence when there is no public API to measure (src/audit.ts `unmeasuredReason`); undefined when there is one. */
+export function unmeasuredCoverage(c: Coverage): string | undefined {
+  if (c.api > 0) return undefined;
+  return c.unmeasured === 'js-entry-points'
+    ? `${PRODUCT} found no exported symbols, because it could not map the TypeScript/JavaScript package's entry points (package.json main, module, exports) to source files.`
+    : `${PRODUCT} found no exported symbols in the indexed code.`;
+}
+
 /** Audit additions of index version 4 (src/audit.ts): lint findings stored at index time. */
 type AuditFindings = { findings?: (WebFinding & { heading?: string; repo?: string })[]; repos: { findingsChecked?: boolean }[] };
 
@@ -187,11 +198,13 @@ function FindingsSection({ data }: { data: AuditFindings }) {
   );
 }
 
-function AuditReport({ repo, summary, data, indexedMs }: { repo: string; summary: string; data: Omit<AuditData, 'summary'>; indexedMs?: number }) {
+export function AuditReport({ repo, summary, data, indexedMs }: { repo: string; summary: string; data: Omit<AuditData, 'summary'>; indexedMs?: number }) {
   // The host serving this page serves the badge too (the canonical domain may not point here yet).
   const site = typeof window !== 'undefined' && /^https?:/.test(window.location.origin) ? window.location.origin : SITE_URL;
   const badge = `[![docs health](${site}/api/badge/${repo}.svg)](${site}/#/audit?repo=${encodeURIComponent(repo)})`;
   const failing = data.runs.filter((r) => r.status === 'fail' || r.status === 'timeout');
+  const unmeasured = unmeasuredCoverage(data.coverage);
+  const linked = data.examples.linked;
   return (
     <div className="audit-report">
       <div className="audit-head">
@@ -227,13 +240,23 @@ function AuditReport({ repo, summary, data, indexedMs }: { repo: string; summary
       <FindingsSection data={data as unknown as AuditFindings} />
       <h3>
         Examples that no longer fit the code{' '}
-        <span className={`chip ${data.examples.mismatched ? 'sev breaking' : 'ok'}`}>
-          {data.examples.mismatched} of {data.examples.linked}
-        </span>
+        {linked > 0 ? (
+          <span className={`chip ${data.examples.mismatched ? 'sev breaking' : 'ok'}`}>
+            {data.examples.mismatched} of {linked}
+          </span>
+        ) : (
+          <span className="chip muted">none checked</span>
+        )}
       </h3>
-      {data.mismatches.length === 0 ? (
+      {linked === 0 ? (
+        <p className="muted small">
+          {data.examples.total
+            ? `No docs example calls the code (${data.examples.total} example${data.examples.total === 1 ? '' : 's'} read), so none was checked against it.`
+            : 'The docs have no code examples to check.'}
+        </p>
+      ) : data.mismatches.length === 0 ? (
         <p className="audit-ok">
-          <Icon name="check" size={16} /> Every call in the {data.examples.linked} examples that use the code fits the signature it reaches.
+          <Icon name="check" size={16} /> Every call in the {linked} example{linked === 1 ? '' : 's'} that use{linked === 1 ? 's' : ''} the code fits the signature it reaches.
         </p>
       ) : (
         <>
@@ -276,12 +299,20 @@ function AuditReport({ repo, summary, data, indexedMs }: { repo: string; summary
       )}
 
       <h3>API coverage</h3>
-      <div className="coverage" role="img" aria-label={`${data.coverage.percent}% of public symbols documented`}>
-        <div className="coverage-bar" style={{ width: `${Math.min(100, data.coverage.percent)}%` }} />
-      </div>
-      <p className="small">
-        <strong>{data.coverage.percent}%</strong> — {data.coverage.documented} of {data.coverage.api} public symbols (what the packages export) are named or called by a doc.
-      </p>
+      {unmeasured ? (
+        <p className="small">
+          <strong>Not measured.</strong> {unmeasured} The score takes no coverage deduction.
+        </p>
+      ) : (
+        <>
+          <div className="coverage" role="img" aria-label={`${data.coverage.percent}% of public symbols documented`}>
+            <div className="coverage-bar" style={{ width: `${Math.min(100, data.coverage.percent)}%` }} />
+          </div>
+          <p className="small">
+            <strong>{data.coverage.percent}%</strong> — {data.coverage.documented} of {data.coverage.api} public symbols (what the packages export) are named or called by a doc.
+          </p>
+        </>
+      )}
       {data.undocumented.length > 0 && (
         <details className="undocumented">
           <summary>

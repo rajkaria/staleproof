@@ -4,7 +4,7 @@ The Staleproof GitHub App checks every pull request without a workflow file: ins
 
 ## Install it
 
-Open the App's page from [staleproof.dev/#/install](https://staleproof.dev/#/install) (**Install the GitHub App**), pick the account and the repositories, and click **Install**. That is all: the next pull request is checked. Nothing is indexed at install time; the first pull request of a repository indexes it (a minute or two for a mid-size repository), and later ones reuse the index.
+Click **Install the GitHub App** on [staleproof.dev/#/install](https://staleproof.dev/#/install), the page's first button, or open [github.com/apps/staleproof](https://github.com/apps/staleproof) directly; pick the account and the repositories, and click **Install**. That is all: the next pull request is checked. Nothing is indexed at install time; the first pull request of a repository indexes it (a minute or two for a mid-size repository), and later ones reuse the index.
 
 ## On every pull request
 
@@ -18,7 +18,7 @@ When a pull request is opened, pushed to, reopened or marked ready for review:
    - **Conclusion**: `success` when the pull request makes nothing wrong and breaks no example, `neutral` when it does (the default never blocks a merge), or `failure` when `[app] fail-on` says so.
    - **Apply fixes**: a button when some findings have a verified fix (see [Fixes](#fixes)).
 4. **A comment**, only when there is something to say: new findings or examples predicted to break. It is the report, kept up to date in place on every push (one comment per pull request, found by its hidden marker). When a later push clears everything, the comment is edited to **All clear** rather than deleted, so the history of the review stays readable. `[app] comment` changes this.
-5. **Suggestions**: each verified fix whose lines are in the pull request's diff becomes a GitHub suggestion in one review, which the author commits with one click. A later push updates a suggestion on the same lines instead of adding another.
+5. **Suggestions**: each verified fix whose lines are in the pull request's diff becomes a GitHub suggestion in one review, which the author commits with one click. A later push updates a suggestion on the same lines instead of adding another. When the [Action](github-action.md) runs on the repository too, a suggestion it already posted for the same findings, on the same lines and with the same text, counts as already there, so the App does not post it again (and the Action does the same for the App's); comments by people never count.
 
 Drafts are skipped until they are marked ready (or set `[app] drafts = true`). **Re-run** on the Checks tab, for one check run or the whole suite, runs the check again on the current head.
 

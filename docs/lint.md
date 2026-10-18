@@ -256,9 +256,11 @@ git, is never sent anywhere, and is safe to delete. `--no-cache` or `STALEPROOF_
 ## In the inner loop
 
 The same check runs before the change leaves the machine: after each edit an AI agent makes and before it stops
-([Claude Code plugin](claude-code.md), Cursor hooks), and on `git commit` ([pre-commit, lefthook, husky](pre-commit.md)).
-`npx staleproof init` sets up the workflow, the pre-commit hook and the agent hooks in one step
-([CLI: init](cli.md#init)).
+([Claude Code plugin](claude-code.md), Cursor hooks), as you type in the editor (the VS Code and Cursor extension
+`staleproof.staleproof` on the Visual Studio Marketplace and Open VSX, or `staleproof lsp` in other
+[editors](editors.md)), and on `git commit` ([pre-commit, lefthook, husky](pre-commit.md)).
+`npx staleproof init` sets up the workflow, the pre-commit hook, the extension recommendation and the agent hooks in
+one step ([CLI: init](cli.md#init)).
 
 ## In CI
 

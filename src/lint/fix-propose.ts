@@ -393,6 +393,14 @@ async function fixAnchor(f: Finding, ctx: Context): Promise<Fix | undefined> {
   let to = renamed?.size === 1 ? [...renamed][0] : undefined;
   let why = 'heading renamed in this change';
   if (!to) {
+    // The heading is there under another slugger: its GitHub anchor, however far the spelling.
+    const heading = await ctx.facts.headingForAnchor(target, anchor);
+    if (heading && heading.anchor !== anchor.toLowerCase()) {
+      to = heading.anchor;
+      why = "the heading's GitHub anchor";
+    }
+  }
+  if (!to) {
     const anchors = (await ctx.hint(f))?.candidates ?? [...((await ctx.facts.anchors(target)) ?? [])];
     to = closestName(anchor.toLowerCase(), anchors, 3);
     why = 'the closest heading';

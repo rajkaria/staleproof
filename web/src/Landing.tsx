@@ -67,6 +67,10 @@ function Hero() {
             maintainers made — to the paragraphs it can make false. It runs those examples before and after the change, and proposes the docs fix with the
             evidence behind each edit.
           </p>
+          <p className="hero-agents">
+            It also checks the files AI coding agents read: a path, command or link in <code>AGENTS.md</code>, <code>CLAUDE.md</code> or your Cursor and Copilot
+            rules that no longer exists is flagged like any other stale doc. <a href="#/docs/lint">How lint works</a>
+          </p>
           <div className="cta-row">
             <a className="btn btn-primary" href="#/install">
               <Icon name="github" /> Add to GitHub in one click

@@ -1,6 +1,6 @@
 # GitHub Action
 
-The composite action in [action.yml](../action.yml), `uses: rajkaria/staleproof@v1`, comments on every pull request with the docs it can make false: the references in its docs, READMEs and AI agent files it makes wrong (also as annotations), the doc sections its code changes reach with the evidence path for each, the examples whose calls no longer fit the changed code, and the result of running the affected docs examples before and after the change. On a schedule it audits the whole docs instead and keeps one issue up to date. It needs no inputs, no secrets and no database: it starts a FalkorDB inside the job and indexes the repository itself. This page is for maintainers adding it to a repository: installing it, what a run does, the inputs and outputs, permissions, agent mode and the docs fix pull request, the scheduled audit, keeping a graph between runs, and the comment format. Status: it has run end to end on a private test repository, from the one-click workflow with no inputs: the comment named a README example the pull request broke, and updated in place when the same pull request fixed the README. No workflow file? The [GitHub App](github-app.md) runs the same check (without example runs) on every pull request once installed.
+The composite action in [action.yml](../action.yml), `uses: rajkaria/staleproof@v1`, comments on every pull request with the docs it can make false: the references in its docs, READMEs and AI agent files it makes wrong (also as annotations), the doc sections its code changes reach with the evidence path for each, the examples whose calls no longer fit the changed code, and the result of running the affected docs examples before and after the change; each verified fix inside the diff is posted as a one-click suggestion. On a schedule it audits the whole docs instead and keeps one issue up to date, or keeps one fix pull request (`mode: fix`); on a published release it checks that the changelog names every breaking API change and lists the docs still relying on it (`mode: release`). It needs no inputs, no secrets and no database: it starts a FalkorDB inside the job and indexes the repository itself. It is listed on the GitHub Marketplace as [Staleproof docs check](https://github.com/marketplace/actions/staleproof-docs-check). This page is for maintainers adding it to a repository: installing it, what a run does, the inputs and outputs, permissions, agent mode and the docs fix pull request, the scheduled audit, keeping a graph between runs, and the comment format. Status: it has run end to end on a private test repository, from the one-click workflow with no inputs: the comment named a README example the pull request broke, and updated in place when the same pull request fixed the README. On the same repository the suggestions were posted in one review and not repeated on a re-run, a suggestion committed from the pull request cleared its finding, and `mode: fix` opened, updated and closed its one pull request (opening it with the default token needs the repository setting in [Fix the docs every week](#fix-the-docs-every-week)). No workflow file? The [GitHub App](github-app.md) runs the same check (without example runs) on every pull request once installed.
 
 ## Install it
 
@@ -46,7 +46,7 @@ The steps of [action.yml](../action.yml), in order, on a pull request (`mode: ch
 
 1. **Set up Node.js and uv**: `actions/setup-node@v7` with Node 22, and `astral-sh/setup-uv@v10.3.0` (the example runner builds its virtualenvs with uv).
 2. **Start FalkorDB**, unless `falkordb-url` is set. With Docker on the runner (GitHub's Ubuntu runners have it), two containers from `falkordb/falkordb:latest`: `staleproof-graph` on port 6379 holds the graph, and `staleproof-scratch` on port 6390 is the disposable server the docs examples run against. The step waits up to 90 seconds for both ports, then sets `FALKORDB_URL=falkor://localhost:6379` and `STALEPROOF_SCRATCH_URL=falkor://localhost:6390` for the next steps. Without Docker it starts nothing, and the CLI starts both servers itself from falkordblite.
-3. **Install staleproof**: `npm install -g staleproof@<version>` (default `0.6.1`). With `version: source`, the CLI is built from the action's own checkout instead (`npm ci`, then `tsup`). When the version cannot be installed from npm, the step warns `staleproof@<version> is not on npm; building it from this action's source instead.` and builds it the same way.
+3. **Install staleproof**: `npm install -g staleproof@<version>` (default `0.7.0`). With `version: source`, the CLI is built from the action's own checkout instead (`npm ci`, then `tsup`). When the version cannot be installed from npm, the step warns `staleproof@<version> is not on npm; building it from this action's source instead.` and builds it the same way.
 4. **Choose the mode**: with `mode: auto` (the default), `check` when there is a pull request (the `pull_request` event, or `pr-url`), else `audit`. Any other value than `auto`, `check`, `audit`, `fix` or `release` fails with `mode must be auto, check, audit, fix or release (got <mode>)`.
 5. **Re-index**, only with `reindex: 'true'` and `falkordb-url` set: `staleproof index <this repository> <also-index...>`. See [Keep the graph between runs](#keep-the-graph-between-runs).
 6. **Check the pull request**:
@@ -125,7 +125,7 @@ Every input is optional.
 | `reindex` | `'false'` | With `falkordb-url`: `'true'` re-indexes this repository and `also-index` at their default branch heads before the check. |
 | `cache` | `'true'` | Keep the job's graph (a FalkorDB dump) and the parse cache between runs with actions/cache, keyed by the Staleproof version (with `version: source`, a hash of the action's source), the repository, `also-index` and the base commit: a later run on the same base skips indexing, and an older dump is re-indexed with only the changed files parsed. Ignored with `falkordb-url`. |
 | `github-token` | `${{ github.token }}` | Reads the repository (clones, the GitHub API, file contents) and posts the comment. Passed as `GITHUB_TOKEN` to Staleproof and as `GH_TOKEN` to the GitHub CLI. |
-| `version` | `'0.6.1'` | The `staleproof` npm version to run, or `source` to build the CLI from the action's checkout. When that version is not on npm, the CLI is built from the action's source. |
+| `version` | `'0.7.0'` | The `staleproof` npm version to run, or `source` to build the CLI from the action's checkout. When that version is not on npm, the CLI is built from the action's source. |
 | `digest-webhook` | `''` | Audit mode: a Slack, Discord or other webhook (use a secret) to post the [docs digest](audit.md#weekly-digest-to-slack-or-discord) to after each audit. The digest's state is kept in the audit issue. |
 | `release-from` | `''` | Release mode: the previous release to compare with. Empty: the latest tag before the release. |
 | `release-to` | `''` | Release mode: the release. Empty: the checkout's `HEAD` (the tag on `release: published`). |
@@ -331,19 +331,19 @@ jobs:
         env:
           FALKORDB_URL: ${{ secrets.STALEPROOF_FALKORDB_URL }}
           STALEPROOF_ORG: falkordb
-        run: npx -y staleproof@0.6.1 index FalkorDB/falkordb-py FalkorDB/GraphRAG-SDK FalkorDB/docs
+        run: npx -y staleproof@0.7.0 index FalkorDB/falkordb-py FalkorDB/GraphRAG-SDK FalkorDB/docs
 ```
 
 This workflow uses only the documented `index` command; unlike the action itself, it has not been run on GitHub. Re-indexing never deletes: what disappeared is marked `gone`, and verdicts and decisions keep pointing at it.
 
 ## Pin the version
 
-`@v1` follows the action's `v1` tag, and the `version` input pins the CLI it installs (default `0.6.1`). For runs that cannot change under you, pin the action to a commit and the CLI to a version:
+`@v1` follows the action's `v1` tag, and the `version` input pins the CLI it installs (default `0.7.0`). For runs that cannot change under you, pin the action to a commit and the CLI to a version:
 
 ```yaml
 - uses: rajkaria/staleproof@<commit-sha>
   with:
-    version: 0.6.1
+    version: 0.7.0
 ```
 
 ## The comment

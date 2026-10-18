@@ -1,8 +1,12 @@
 # Quickstart
 
-From nothing to a checked pull request. First the three ways to start: no install on the website, one click for the GitHub Action, or one command. Then the full walkthrough: start FalkorDB, index FalkorDB's three public repositories, check a real pull request with and without a model, run one docs example before and after it, build the patch, check your own changes before there is a pull request, open the web UI and connect Claude Code; then your own repositories. Every command here is copy-pasteable; you need no account other than an optional model API key.
+From nothing to a checked pull request. First the four ways to start: the GitHub App with no workflow file, no install on the website, one click for the GitHub Action, or one command. Then the full walkthrough: start FalkorDB, index FalkorDB's three public repositories, check a real pull request with and without a model, run one docs example before and after it, build the patch, check your own changes before there is a pull request, open the web UI and connect Claude Code; then your own repositories. Every command here is copy-pasteable; you need no account other than an optional model API key.
 
-## Three ways to start
+## Four ways to start
+
+### No workflow file: the GitHub App
+
+Click **Install the GitHub App** on [staleproof.dev/#/install](https://staleproof.dev/#/install), pick the repositories (public or private) and click **Install**. Every pull request then gets a **Staleproof** check run with the docs, READMEs and agent files it makes wrong, a comment when there is something to say, each verified fix inside the diff as a one-click suggestion, and an **Apply fixes** button for the rest. It runs no examples; the Action below does. See [GitHub App](github-app.md).
 
 ### No install: the website
 

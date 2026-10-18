@@ -2,6 +2,10 @@ import { posix } from 'node:path';
 import { normalizeRepoPath, type RepoFacts } from './facts.js';
 import type { ScannedDoc, Span } from './scan.js';
 import type { RawFinding } from './engine.js';
+import type { Severity } from './types.js';
+
+/** A link finding: `severity` lowers the rule's level for this one finding (an anchor another docs site may still resolve). */
+export type LinkFinding = RawFinding & { severity?: Severity };
 
 /** Output and generated directories docs may rightly name before they exist. */
 const GENERATED = /^(dist|build|out|target|coverage|node_modules|\.next|\.nuxt|\.svelte-kit|\.turbo|\.cache|\.venv|venv|__pycache__|site|_build|public\/build)(\/|$)/;
@@ -198,8 +202,8 @@ export function linkTarget(target: string, docPath: string, docsFramework: boole
   return { file: base, anchor, tries };
 }
 
-export async function checkLinks(doc: ScannedDoc, facts: RepoFacts): Promise<RawFinding[]> {
-  const out: RawFinding[] = [];
+export async function checkLinks(doc: ScannedDoc, facts: RepoFacts): Promise<LinkFinding[]> {
+  const out: LinkFinding[] = [];
   for (const link of doc.links) {
     const t = linkTarget(link.text, doc.path, facts.docsFramework);
     if (!t) continue;
@@ -241,10 +245,31 @@ export async function checkLinks(doc: ScannedDoc, facts: RepoFacts): Promise<Raw
     }
     if (anchors.has(wanted.toLowerCase())) continue;
     const where = resolved === doc.path ? 'This page' : `\`${resolved}\``;
+    // The subject is the anchor as written either way (fingerprints are frozen at version 1).
+    const subject = `${resolved === doc.path ? '' : resolved}#${anchor}`;
+    // The heading is there under another slugger (zustand's site keeps `’`, `,` and `(`): the
+    // link works on that site and not on GitHub, so it is told apart and never lowers a score.
+    const heading = await facts.headingForAnchor(resolved, wanted);
+    if (heading && heading.anchor !== wanted.toLowerCase()) {
+      const how = /[^\p{L}\p{N}\s_-]/u.test(wanted) ? 'whose slugger keeps punctuation' : 'that builds anchors another way';
+      out.push({
+        rule: 'anchor-missing',
+        severity: 'info',
+        span: link,
+        subject,
+        message:
+          `The heading “${heading.title}” is ${resolved === doc.path ? 'on this page' : `in \`${resolved}\``}, but its GitHub anchor is \`#${heading.anchor}\`: ` +
+          `\`#${anchor}\` works only on a docs site ${how}.`,
+        looked: `headings of ${resolved}`,
+        target: resolved,
+        candidates: [heading.anchor],
+      });
+      continue;
+    }
     out.push({
       rule: 'anchor-missing',
       span: link,
-      subject: `${resolved === doc.path ? '' : resolved}#${anchor}`,
+      subject,
       message: `${where} has no heading \`#${anchor}\`.`,
       looked: `headings of ${resolved}`,
       target: resolved,

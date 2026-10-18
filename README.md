@@ -141,15 +141,21 @@ pull request for the before/after runs.
 
 ## Quickstart
 
-Four ways to start:
+Five ways to start:
 
+- **No workflow file.** [Install the GitHub App](https://github.com/apps/staleproof) on a repository, public or
+  private: every pull request gets a check run with the docs it makes wrong, a comment when there is something to
+  say, one-click suggestions for the verified fixes and an **Apply fixes** button (no example runs).
+  [docs/github-app.md](docs/github-app.md).
+- **One click, with example runs.** On [staleproof.dev/#/install](https://staleproof.dev/#/install), type your
+  repository and commit the workflow GitHub opens (or copy [`examples/staleproof.yml`](examples/staleproof.yml)).
+  Every pull request then gets a comment with the docs it can make false and the examples run before and after it.
+  No secrets, no database.
 - **No install.** Paste a pull request URL of any public Python, TypeScript or JavaScript repository on [staleproof.dev](https://staleproof.dev).
   It is indexed on the fly and checked in graph mode; examples are not run on the hosted service.
-- **No workflow file.** Install the [GitHub App](docs/github-app.md) on a repository, public or private: every pull
-  request gets a check run with the docs it makes wrong and a comment when there is something to say (no example runs).
-- **One click.** On [staleproof.dev/#/install](https://staleproof.dev/#/install), type your repository and commit the
-  workflow GitHub opens (or copy [`examples/staleproof.yml`](examples/staleproof.yml)). Every pull request then gets
-  a comment with the docs it can make false and the examples run before and after it. No secrets, no database.
+- **In your editor or coding agent.** The VS Code and Cursor extension `staleproof.staleproof` (Visual Studio
+  Marketplace and Open VSX) marks stale references as you type; the Claude Code plugin tells Claude which docs an
+  edit made wrong. Both read only the local checkout.
 - **One command.** `npx -y staleproof check <pr-url> --no-agent` starts a local FalkorDB if none is configured,
   indexes the repository on first use (`--with owner/docs` for docs in another repository) and runs the check.
   Private repositories work with `GITHUB_TOKEN`.
@@ -195,11 +201,13 @@ The full walkthrough is in [docs/getting-started.md](docs/getting-started.md).
 |---|---|---|
 | Website | Paste a pull request URL on [staleproof.dev](https://staleproof.dev), or audit a repository at [#/audit](https://staleproof.dev/#/audit) — no install, any public repository | [docs/install.md](docs/install.md) |
 | CLI | `npx -y staleproof <command>` — lint, index, check (a PR or your working tree), audit, docs-for, run, decide, patch, serve | [docs/cli.md](docs/cli.md) |
-| GitHub Action | `uses: rajkaria/staleproof@v1` — zero config: a comment on every PR with the docs it can make false, the examples predicted to break and the examples run before and after ([`examples/staleproof.yml`](examples/staleproof.yml)); on a schedule, a docs audit kept in one issue | [docs/github-action.md](docs/github-action.md) |
-| GitHub App | Install it on a repository, no YAML: a check run and, when there is something to say, a comment on every pull request, public or private; one-click suggestions for verified fixes | [docs/github-app.md](docs/github-app.md) |
+| GitHub App | [Install it](https://github.com/apps/staleproof) on a repository, no YAML: a check run and, when there is something to say, a comment on every pull request, public or private; one-click suggestions for verified fixes and an **Apply fixes** button for the rest | [docs/github-app.md](docs/github-app.md) |
+| GitHub Action | `uses: rajkaria/staleproof@v1`, on the [GitHub Marketplace](https://github.com/marketplace/actions/staleproof-docs-check) — zero config: a comment on every PR with the docs it can make false, the examples predicted to break and the examples run before and after, and the verified fixes as suggestions ([`examples/staleproof.yml`](examples/staleproof.yml)); on a schedule, a docs audit kept in one issue, or a weekly fix pull request (`mode: fix`; the repository must allow GitHub Actions to create pull requests); on a release, the release gate (`mode: release`) | [docs/github-action.md](docs/github-action.md) |
 | Claude Code plugin | `/plugin marketplace add rajkaria/staleproof`, then `/plugin install staleproof@staleproof` — after every edit Claude hears which docs and agent files it made wrong, and fixes them before it stops | [docs/claude-code.md](docs/claude-code.md) |
 | pre-commit | `staleproof init`, or `repo: https://github.com/rajkaria/staleproof` with hook `staleproof` — blocks a commit that makes a docs reference wrong | [docs/pre-commit.md](docs/pre-commit.md) |
-| Editors | `staleproof lsp` and the VS Code / Cursor extension: stale docs references as you type, verified quick fixes, hover from docs to code; also Neovim, Zed, Helix, JetBrains | [docs/editors.md](docs/editors.md) |
+| Editors | The VS Code / Cursor extension `staleproof.staleproof`, on the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=staleproof.staleproof) and [Open VSX](https://open-vsx.org/extension/staleproof/staleproof), and `staleproof lsp` behind it: stale docs references as you type, verified quick fixes, hover from docs to code; also Neovim, Zed, Helix, JetBrains | [docs/editors.md](docs/editors.md) |
+| Fixes | `npx -y staleproof fix` — applies every fix it can verify (renamed scripts, flags, files, headings, env vars, symbols, parameters), each re-linted before it is written | [docs/fix.md](docs/fix.md) |
+| Release gate | `npx -y staleproof release` — breaking public API changes since the last tag, whether the changelog names them, and the docs still relying on them | [docs/release.md](docs/release.md) |
 | Docs site | A one-line "checked against `abc1234`" stamp on each page: Docusaurus and MkDocs plugins, any HTML | [docs/verified-stamp.md](docs/verified-stamp.md) |
 | MCP, hosted | `claude mcp add --transport http staleproof https://staleproof.dev/api/mcp` — nothing to install | [docs/mcp.md](docs/mcp.md) |
 | MCP, local (Claude Code) | `claude mcp add staleproof -- npx -y staleproof mcp` — runs examples too | [docs/mcp.md](docs/mcp.md) |
@@ -297,9 +305,9 @@ Parameters, results and errors for each: [docs/tools.md](docs/tools.md).
 | **Built and run** (against FalkorDB's real repositories) | Indexer, cross-repo impact, clearance, PageRank ranking, sandboxed example runs before/after a PR, decisions and verdict memory, docs patch, CLI, MCP server, web demo, graph-mode checks. Covered by `npm run verify`. |
 | **Static checks and the audit** | Example calls checked against the code at index time, on the current FalkorDB docs, GraphRAG-SDK, Flask (Sphinx docs) and httpx: the findings [above](#without-a-pull-request). Predicted breaks in PR checks, `check` on a working tree, `docs-for`, and the audit's CLI, badge, HTTP API and MCP tool are covered by `npm run verify` on the fixture organisations (Python, TypeScript, reStructuredText); the Action's audit mode has run on GitHub, and for it and `open-docs-pr` the tests check the commands, flags and report lines the steps use. |
 | **Agent mode, run with a real model** | `deepseek-v4-pro` through DeepSeek's Anthropic-compatible API ([how](docs/agent.md)), on the CLI and the live site. Each PR got a different tool order: #262 impact → read_section → decisions_for → run_example → record_verdict (5 calls, 1 verdict); #267 15 calls, 3 verdicts, each citing its before/after runs; #276 38 calls paging through 43 sections, all with verdicts. The first #276 run stopped at 40 turns with 21 sections open: `impact` capped results at 40 and the model's invented paging arguments were dropped silently; `impact` now pages, unknown arguments are an error, and the loop tracks every impacted section itself. Every verdict on these four PRs is `ok` — they are fixes, and FalkorDB updates its docs in the same PR — so the live graph holds no proposed edit; edits and the docs patch are exercised on the test fixture organisation. |
-| **Live** | [staleproof.dev](https://staleproof.dev) (same deployment: [lockstep-rho.vercel.app](https://lockstep-rho.vercel.app)) on Vercel, deployed from `main`, querying the org graph on FalkorDB Cloud (4.22). Hosted workspaces: any public repository is indexed on first use into a workspace graph of its own (`gh-<owner>`), with size limits and least-recently-used eviction; MCP over HTTP at `https://staleproof.dev/api/mcp`. Published on npm as [`staleproof`](https://www.npmjs.com/package/staleproof). |
+| **Live** | [staleproof.dev](https://staleproof.dev) (same deployment: [lockstep-rho.vercel.app](https://lockstep-rho.vercel.app)) on Vercel, deployed from `main`, querying the org graph on FalkorDB Cloud (4.22). Hosted workspaces: any public repository is indexed on first use into a workspace graph of its own (`gh-<owner>`), with size limits and least-recently-used eviction; MCP over HTTP at `https://staleproof.dev/api/mcp`. Published on npm as [`staleproof`](https://www.npmjs.com/package/staleproof); the Action on the [GitHub Marketplace](https://github.com/marketplace/actions/staleproof-docs-check); the [GitHub App](https://github.com/apps/staleproof), which reads private repositories into a graph per installation; the editor extension `staleproof.staleproof` on the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=staleproof.staleproof) and [Open VSX](https://open-vsx.org/extension/staleproof/staleproof); the Claude Code plugin from this repository's plugin marketplace. |
 | **Multi-tenant** | One graph per organisation: a second graph (`encode`, from [encode/httpx](https://github.com/encode/httpx)) sits next to `falkordb` on the same server — [docs/FACTS-encode.md](docs/FACTS-encode.md). |
-| **Run end to end** | The GitHub Action, exactly as the install page writes it (`uses: rajkaria/staleproof@v1`, no inputs), on a private test repository: a pull request that renamed a method the README's quickstart calls got one comment saying the pull request breaks that example (passes before, `AttributeError` after); when the same pull request then fixed the README, the comment updated in place to "passes before and after". A second pull request made an argument required and the comment named the README example that breaks with `TypeError`. |
+| **Run end to end** | The GitHub Action, exactly as the install page writes it (`uses: rajkaria/staleproof@v1`, no inputs), on a private test repository: a pull request that renamed a method the README's quickstart calls got one comment saying the pull request breaks that example (passes before, `AttributeError` after); when the same pull request then fixed the README, the comment updated in place to "passes before and after". A second pull request made an argument required and the comment named the README example that breaks with `TypeError`. On the same repository, the verified fixes were posted as suggestions in one review and not repeated on a re-run, a suggestion committed from the pull request cleared its finding, and `mode: fix` opened its fix pull request, updated it and closed it when nothing was left (the workflow's own token can open it only with **Allow GitHub Actions to create and approve pull requests** on). The GitHub App checked pull requests there end to end after its registration. |
 | **Written, not exercised** | The Docker image (no Docker on the development machine). |
 | **Designed** | Issue/discussion → symbol links ("asked about but undocumented"). See [VISION.md](VISION.md). |
 
@@ -307,11 +315,12 @@ Built for [Graph Hacks](https://www.wemakedevs.org/hackathons/falkordb) (WeMakeD
 
 ## Limits, stated plainly
 
-- **Python, TypeScript and JavaScript.** Python is read anywhere; TypeScript and JavaScript inside published npm
-  packages. Docs can be Markdown, MDX or reStructuredText; Sphinx is scanned, not built, so `.. include::`, autodoc
-  output and Sphinx extensions are not expanded, and `:ref:` resolves within one page.
-- **Only Python examples run and get argument checks.** JavaScript accepts any argument count, so JavaScript and
-  TypeScript examples are linked and checked only for names that do not exist, and are never run.
+- **Python, TypeScript, JavaScript and Go.** Python is read anywhere; TypeScript and JavaScript inside published npm
+  packages; Go in every package of a module. Docs can be Markdown, MDX or reStructuredText; Sphinx is scanned, not
+  built, so `.. include::`, autodoc output and Sphinx extensions are not expanded, and `:ref:` resolves within one page.
+- **Python, JavaScript and TypeScript examples run; Go examples do not.** Keyword checks are Python only; JavaScript,
+  TypeScript and Go calls get positional argument counts, and a signature whose arity cannot be read (overloads,
+  decorators, `arguments`) is never judged ([Indexing](docs/indexing.md#static-checks-of-examples)).
 - **Static checks follow exact resolutions only.** A call reached by name, a function behind an unknown decorator, a
   dynamic class or a `*args`/`**kwargs` call is never judged: no mismatch and no predicted break is not proof that an
   example works. The runs are.
@@ -338,7 +347,9 @@ Built for [Graph Hacks](https://www.wemakedevs.org/hackathons/falkordb) (WeMakeD
 - **The agent was written for Claude** (`claude-sonnet-5-5`, adaptive thinking, refusal fallback); that path is tested
   against a local fake API only. The real runs above used `deepseek-v4-pro`.
 - **Private repositories need a token.** The CLI and the Action read private GitHub repositories with `GITHUB_TOKEN`
-  (the Action's default token covers its own repository); the hosted site indexes public repositories only.
+  (the Action's default token covers its own repository). The hosted site and the hosted MCP server index public
+  repositories only; the GitHub App reads the private repositories it is installed on, into a graph per installation
+  that no public endpoint can read.
 
 More, with workarounds: [docs/troubleshooting.md](docs/troubleshooting.md).
 

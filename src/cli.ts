@@ -14,7 +14,7 @@ import { indexOrg } from './indexer/index.js';
 import { parseRepoName, type Checkout } from './indexer/repo.js';
 import { checkoutOrDownload } from './indexer/ensure.js';
 import { packageRoot, packageVersion } from './pkg.js';
-import { clearanceText, dim, impactText, newFindingsText, runText, traceLine } from './format/text.js';
+import { allClearText, clearanceText, dim, impactText, newFindingsText, runText, traceLine } from './format/text.js';
 import { AnthropicModel, claudeCredentialsAvailable, type Effort } from './agent/anthropic.js';
 import { runAgentCheck } from './agent/loop.js';
 import { prNewFindings, runGraphCheck } from './agent/graph-check.js';
@@ -245,6 +245,11 @@ async function checkPr(prUrl: string, opts: { agent: boolean; model?: string; ef
       const impact = data('impact') as ImpactData | undefined;
       const cleared = (data('clearance') as { cleared: ClearedSymbol[] } | undefined)?.cleared ?? [];
       const ranked = (data('rank_sections') as { ranked: RankedSection[] } | undefined)?.ranked;
+      const clear = impact && !r.events.some((e) => e.type === 'tool_result' && e.name === 'run_example') ? allClearText(impact, cleared, r.newFindings) : undefined;
+      if (clear) {
+        console.log(`${clear}\n${dim(`Stored as ${r.checkId}.`)}`);
+        return;
+      }
       if (r.newFindings) console.log(`${newFindingsText(r.newFindings)}\n`);
       if (impact) console.log(impactText(impact, ranked));
       console.log('');
@@ -281,6 +286,12 @@ async function checkLocal(opts: { dir?: string; base?: string; repo?: string; js
       if (opts.out) await writeFile(opts.out, `${md}\n`);
       else console.log(md);
     } else {
+      const clear = allClearText(r.data.impact, r.data.cleared, newFindings || undefined);
+      if (clear) {
+        console.log(`${clear}\n${dim('Static check of the working tree: nothing was run or written to the graph.')}`);
+        if (opts.failOnPredicted && r.data.impact.predicted.length) process.exitCode = 1;
+        return;
+      }
       if (newFindings) console.log(`${newFindingsText(newFindings, 'these changes')}\n`);
       console.log(impactText(r.data.impact));
       console.log('');

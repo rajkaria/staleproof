@@ -89,6 +89,89 @@ function maskCode(line: string): string {
   return line.replace(/(`+)([^`]|[^`].*?[^`])\1(?!`)/g, (m) => ' '.repeat(m.length));
 }
 
+/** A link destination found in a line: `start`/`end` (0-based, end exclusive) cover the target as written. */
+export interface Destination {
+  text: string;
+  start: number;
+  end: number;
+  /** Index just after the destination (after the closing `>` of the bracketed form). */
+  next: number;
+}
+
+/**
+ * The CommonMark link destination at `at`: `<…>` (spaces and parentheses allowed; no `<`,
+ * `>` or line break inside) or a plain one (no spaces; parentheses only when balanced;
+ * `\` escapes the next character). Undefined when there is none, or it is empty.
+ */
+export function linkDestination(s: string, at: number): Destination | undefined {
+  if (s[at] === '<') {
+    for (let i = at + 1; i < s.length; i++) {
+      const c = s[i]!;
+      if (c === '\\') i++;
+      else if (c === '<') return undefined;
+      else if (c === '>') return i > at + 1 ? { text: s.slice(at + 1, i), start: at + 1, end: i, next: i + 1 } : undefined;
+    }
+    return undefined;
+  }
+  let depth = 0;
+  let i = at;
+  for (; i < s.length; i++) {
+    const c = s[i]!;
+    if (c === '\\' && i + 1 < s.length) i++;
+    else if (/\s/.test(c)) break;
+    else if (c === '(') depth++;
+    else if (c === ')') {
+      if (depth === 0) break;
+      depth--;
+    }
+  }
+  if (depth !== 0 || i === at) return undefined;
+  return { text: s.slice(at, i), start: at, end: i, next: i };
+}
+
+/** Index after an optional link title (`"…"`, `'…'`, `(…)`) at `at`, or at itself when there is none; -1 for an unclosed one. */
+function skipTitle(s: string, at: number): number {
+  const close = { '"': '"', "'": "'", '(': ')' }[s[at] ?? ''];
+  if (!close) return at;
+  for (let i = at + 1; i < s.length; i++) {
+    if (s[i] === '\\') i++;
+    else if (s[i] === close) return i + 1;
+    else if (close === ')' && s[i] === '(') return -1;
+  }
+  return -1;
+}
+
+const skipSpace = (s: string, at: number) => {
+  while (at < s.length && (s[at] === ' ' || s[at] === '\t')) at++;
+  return at;
+};
+
+/** Destinations of inline links and images (`[text](dest "title")`, `![alt](<dest>)`) in a line with code masked. */
+export function inlineLinkDestinations(line: string): Destination[] {
+  const out: Destination[] = [];
+  for (let from = line.indexOf(']('); from >= 0; from = line.indexOf('](', from + 1)) {
+    const d = linkDestination(line, skipSpace(line, from + 2));
+    if (!d) continue;
+    let at = skipSpace(line, d.next);
+    if (at > d.next) at = skipTitle(line, at);
+    if (at < 0 || line[skipSpace(line, at)] !== ')') continue;
+    out.push(d);
+  }
+  return out;
+}
+
+/** The destination of a reference definition (`[label]: <dest> "title"`), when the line is one. */
+export function referenceDestination(line: string): Destination | undefined {
+  const m = /^\s{0,3}\[[^\]]+\]:[ \t]*/.exec(line);
+  if (!m) return undefined;
+  const d = linkDestination(line, m[0].length);
+  if (!d) return undefined;
+  let at = skipSpace(line, d.next);
+  if (at > d.next) at = skipTitle(line, at);
+  // Anything but a title after the destination makes it a paragraph, not a definition.
+  return at >= 0 && skipSpace(line, at) === line.length ? d : undefined;
+}
+
 function scanMarkdownClaims(path: string, text: string): ScannedDoc {
   const lines = text.replace(/\r\n?/g, '\n').split('\n');
   const doc = emptyDoc(path, lines);
@@ -155,18 +238,17 @@ function scanMarkdownClaims(path: string, text: string): ScannedDoc {
     }
 
     const masked = maskCode(line);
-    for (const m of masked.matchAll(/\]\(\s*<?([^)\s>]+)>?(?:\s+(?:"[^"]*"|'[^']*'))?\s*\)/g)) {
-      const column = m.index! + m[0].indexOf(m[1]!) + 1;
-      doc.links.push({ kind: 'inline', text: m[1]!, line: lineNo, column, endColumn: column + m[1]!.length });
+    // CommonMark destinations: `<…>` may hold spaces and parentheses, plain ones balanced parentheses.
+    for (const d of inlineLinkDestinations(masked)) {
+      doc.links.push({ kind: 'inline', text: d.text, line: lineNo, column: d.start + 1, endColumn: d.end + 1 });
     }
-    const def = /^\s{0,3}\[[^\]]+\]:\s*<?([^\s>]+)>?/.exec(masked);
-    if (def) {
-      const column = masked.indexOf(def[1]!, def[0].length - def[1]!.length - 1) + 1;
-      doc.links.push({ kind: 'reference', text: def[1]!, line: lineNo, column, endColumn: column + def[1]!.length });
-    }
-    for (const m of masked.matchAll(/\b(?:href|src)=["']([^"']+)["']/g)) {
-      const column = m.index! + m[0].indexOf(m[1]!) + 1;
-      doc.links.push({ kind: 'html', text: m[1]!, line: lineNo, column, endColumn: column + m[1]!.length });
+    const def = referenceDestination(masked);
+    if (def) doc.links.push({ kind: 'reference', text: def.text, line: lineNo, column: def.start + 1, endColumn: def.end + 1 });
+    // The attribute's own quote closes it: `href="it's.md"` keeps its apostrophe.
+    for (const m of masked.matchAll(/\b(?:href|src)=(?:"([^"]+)"|'([^']+)')/g)) {
+      const target = m[1] ?? m[2]!;
+      const column = m.index! + m[0].indexOf(target) + 1;
+      doc.links.push({ kind: 'html', text: target, line: lineNo, column, endColumn: column + target.length });
     }
   }
   if (fence) doc.fences.push(fence.fence);

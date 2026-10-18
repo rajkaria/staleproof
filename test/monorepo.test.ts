@@ -1,7 +1,23 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { listFiles, parseRepo } from '../src/indexer/index.js';
-import { moduleNames, nearestPackage, pythonSourceRoots, workspacePackages } from '../src/indexer/repo.js';
+import { directoriesOf, moduleNames, nearestPackage, olderOrTranslatedDocs, pythonSourceRoots, workspacePackages } from '../src/indexer/repo.js';
+
+describe('pages that show an earlier API', () => {
+  it('migration guides and previous-version pages are not judged against today’s code', () => {
+    const dirs = directoriesOf(['docs/a.md']);
+    for (const p of [
+      'docs/reference/migrations/migrating-to-v4.md',
+      'docs/reference/previous-versions/zustand-v3-create-context.md',
+      'docs/guides/migrating-to-v3.mdx',
+      'docs/upgrade-guide.md',
+      'docs/legacy/old.md',
+    ]) expect(olderOrTranslatedDocs(p, dirs), p).toBe(true);
+    for (const p of ['docs/learn/guides/how-to-reset-state.md', 'docs/guides/nextjs.mdx', 'README.md', 'docs/migrate.py', 'libs/agno/migrations/README.md']) {
+      expect(olderOrTranslatedDocs(p, dirs), p).toBe(false);
+    }
+  });
+});
 import { lintRepo } from '../src/lint/engine.js';
 import { FIXTURES } from './helpers.js';
 

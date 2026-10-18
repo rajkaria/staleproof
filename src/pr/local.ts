@@ -7,6 +7,7 @@ import * as Q from '../graph/queries.js';
 import type { OrgGraph } from '../graph/client.js';
 import { git, parseRepoName } from '../indexer/repo.js';
 import { symbolId } from '../indexer/resolve.js';
+import { allClearLine } from '../format/text.js';
 import { countMatches, groupImpact, shellQuote, type ClearedSymbol, type ImpactData, type ImpactRow, type Severity } from '../tools/graph-tools.js';
 import { result, Tracer, type ToolContext, type ToolDef } from '../tools/types.js';
 import { prFindingsSummary, type PrFindings } from '../agent/graph-check.js';
@@ -324,6 +325,7 @@ export const checkChangesTool: ToolDef<
     } catch (err) {
       r.data.newFindingsError = (err as Error).message;
     }
+    summary = allClearLine(r.data.impact, r.data.newFindings) ?? summary;
     return result('check_changes', tracer, summary, r.data);
   },
 };

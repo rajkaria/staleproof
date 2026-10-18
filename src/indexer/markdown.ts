@@ -1,4 +1,5 @@
 import { scanRst } from './rst.js';
+import { inlineLinkDestinations } from '../lint/scan.js';
 
 /**
  * A tolerant scanner for Markdown and MDX. Strict MDX parsers reject real-world
@@ -214,9 +215,8 @@ export function scanMarkdown(path: string, text: string): MdDoc {
     for (const m of line.matchAll(/(`+)([^`]|[^`].*?[^`])\1(?!`)/g)) {
       current.inlineCode.push({ text: m[2]!.trim(), line: lineNo });
     }
-    for (const m of line.matchAll(/\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g)) {
-      current.links.push({ target: m[1]!, line: lineNo });
-    }
+    // CommonMark destinations, as lint reads them (src/lint/scan.ts): `<…>` with spaces and parentheses.
+    for (const d of inlineLinkDestinations(line)) current.links.push({ target: d.text, line: lineNo });
     for (const m of line.matchAll(/\bhref=["']([^"']+)["']/g)) {
       current.links.push({ target: m[1]!, line: lineNo });
     }

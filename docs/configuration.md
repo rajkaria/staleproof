@@ -46,7 +46,7 @@ Staleproof was first published as Lockstep (npm `lockstep-docs`). Every `STALEPR
 | `GITHUB_APP_ID` | — | The GitHub App's numeric id; with the two below it turns the App's webhook and cron on ([GitHub App](github-app.md#run-your-own-app)) | `serve`, Vercel |
 | `GITHUB_APP_PRIVATE_KEY` | — | The App's private key: a PEM, a PEM with `\n` on one line, or base64 | `serve`, Vercel |
 | `GITHUB_APP_WEBHOOK_SECRET` | — | Checks every webhook delivery's `X-Hub-Signature-256` | `serve`, Vercel |
-| `GITHUB_APP_SLUG` | — | Shows the install button on `#/install` (via `/api/health`) | `serve`, Vercel |
+| `GITHUB_APP_SLUG` | — | Makes **Install the GitHub App** the primary button on `#/install` (via `/api/health`); without an App the Action's button is | `serve`, Vercel |
 | `CRON_SECRET` | — | Protects `GET /api/github/cron` (Vercel Cron sends it as a bearer token); without it the App's daily job is off | `serve`, Vercel |
 | `PORT` | `8080` | Port `serve` listens on | `serve` (`--port` overrides) |
 | `HOST` | `127.0.0.1` | Interface `serve` binds | `serve` (`--host` overrides) |

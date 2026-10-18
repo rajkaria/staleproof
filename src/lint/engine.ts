@@ -32,6 +32,8 @@ export interface RawFinding {
   target?: string;
   /** Names that do exist there (fix candidates). */
   candidates?: string[];
+  /** Lower than the rule's level for this one finding (an anchor another docs site may resolve); never raises it. */
+  severity?: Severity;
 }
 
 export interface LintOptions {
@@ -201,7 +203,10 @@ export async function lintRepo(opts: LintOptions): Promise<LintResult> {
     if (!enabled(f.rule) || isSuppressed(page.doc, f.span.line, f.rule)) continue;
     if (opts.files?.length && !opts.files.includes(page.target.path) && !(f.target && opts.files.includes(f.target))) continue;
     const setting = config?.rules?.[f.rule];
-    const severity: Severity = setting && setting !== 'off' ? setting : RULE_BY_ID.get(f.rule)!.severity;
+    const level: Severity = setting && setting !== 'off' ? setting : RULE_BY_ID.get(f.rule)!.severity;
+    // A check may lower one finding's level (an anchor another docs site resolves), never raise it.
+    const RANK: Record<Severity, number> = { info: 0, warning: 1, error: 2 };
+    const severity: Severity = f.severity && RANK[f.severity] < RANK[level] ? f.severity : level;
     const key = `${f.rule}\0${page.target.path}\0${f.subject}`;
     const n = occurrences.get(key) ?? 0;
     occurrences.set(key, n + 1);

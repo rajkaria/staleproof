@@ -11,6 +11,7 @@ import { ingestPullRequest } from '../pr/ingest.js';
 import { clearanceTool, impactTool, rankSectionsTool, type ImpactData } from '../tools/graph-tools.js';
 import { runExampleTool } from '../tools/run-example.js';
 import { result, Tracer, type ToolContext, type ToolDef, type ToolResult } from '../tools/types.js';
+import { allClearLine } from '../format/text.js';
 import { checkId, type CheckResult } from './loop.js';
 import { storedTrace, type CheckStatus, type TraceEvent } from './trace.js';
 
@@ -131,6 +132,9 @@ export function prFindingsSummary(pf: PrFindings, subject = 'This pull request')
   );
 }
 
+// The one-line all-clear lives with the formatters (pure, no graph): re-exported for the check and its callers.
+export { allClearLine } from '../format/text.js';
+
 /** At most this many findings ride along in a check's trace (the comment lists them all). */
 const TRACE_FINDINGS = 50;
 
@@ -228,8 +232,11 @@ export async function runGraphCheck(
       const r = await call(runExampleTool, { example_id: ex, pr_url: pr });
       if (r) verdicts.push(`${ex}: ${r.data.verdict}`);
     }
-    summary =
-      (newFindings?.total ? `${prFindingsSummary(newFindings)} ` : '') +
+    // Nothing found: one plain line (the cleared symbols stay in the clearance step and the comment).
+    const clear = examples.length ? undefined : allClearLine(data, newFindings);
+    summary = clear
+      ? clear
+      : (newFindings?.total ? `${prFindingsSummary(newFindings)} ` : '') +
       `${impact.summary} ${clearance?.summary ?? ''}`.trim() +
       (examples.length
         ? ` Ran ${examples.length} example(s) before and after the PR: ${verdicts.join('; ')}.`

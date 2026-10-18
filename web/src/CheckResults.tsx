@@ -46,6 +46,25 @@ export function findingGroups<F extends WebFinding>(findings: F[]): [string, F[]
   return [...out];
 }
 
+/**
+ * The one-line all-clear (src/format/text.ts `allClearLine`): no doc section reached, nothing predicted or
+ * already out of date, and no docs reference made wrong. Recomputed here so checks stored before 0.7 read the same.
+ */
+export function allClearLine(impact: ImpactData | undefined, nf?: Pick<PrFindingsView, 'total' | 'fixed'>): string | undefined {
+  if (!impact || impact.totalSections || impact.predicted?.length || impact.mismatched?.length || nf?.total) return undefined;
+  const local = impact.pr.state === 'local';
+  const subject = local ? 'these changes' : 'this pull request';
+  const changed = impact.changed.filter((c) => c.change !== 'added').length;
+  const added = impact.changed.length - changed;
+  const what = changed
+    ? `the ${changed === 1 ? 'changed symbol reaches' : `${changed} changed symbols reach`} no docs`
+    : added
+      ? `${subject} only add${local ? '' : 's'} new symbols (${added}), which cannot make an existing doc false`
+      : `${subject} touch${local ? '' : 'es'} no Python, TypeScript or JavaScript symbol`;
+  if (!nf) return `${what[0]!.toUpperCase()}${what.slice(1)}.`;
+  return `All clear: ${what}, and no docs reference became wrong${nf.fixed ? ` (${nf.fixed} fixed)` : ''}.`;
+}
+
 export function CheckResults({ view, packageRepo }: { view: CheckView; packageRepo: PackageRepo }) {
   const sections = useMemo(() => {
     const list = view.impact?.sections ?? [];
@@ -55,6 +74,8 @@ export function CheckResults({ view, packageRepo }: { view: CheckView; packageRe
   }, [view.impact, view.ranked]);
   const counts = view.impact?.counts ?? { breaking: 0, api: 0, behavior: 0 };
   if (!view.impact?.counts) for (const s of sections) counts[s.severity]++;
+  // A finished check with nothing to report leads with one line; the cleared symbols fold away under it.
+  const clear = view.finished?.status === 'done' ? allClearLine(view.impact, newFindingsOf(view.impact)) : undefined;
   return (
     <section className="results">
       <div className="results-head">
@@ -84,14 +105,14 @@ export function CheckResults({ view, packageRepo }: { view: CheckView; packageRe
             <div className={`summary st-${view.finished.status}`}>
               <strong>{view.finished.status === 'done' ? 'Done' : view.finished.status}</strong> · {view.finished.toolCalls} tool calls
               {view.finished.verdicts ? ` · ${view.finished.verdicts} verdicts` : ''}
-              <p>{view.finished.summary}</p>
+              <p>{clear ?? view.finished.summary}</p>
               {view.finished.verdicts > 0 && view.pr && <PatchLink pr={view.pr} />}
             </div>
           )}
           {view.finished?.status === 'done' && view.impact && <InstallNudge repo={view.impact.pr.repo} />}
           {newFindingsOf(view.impact) && <NewFindingsList nf={newFindingsOf(view.impact)!} />}
           {view.impact?.predicted && view.impact.predicted.length > 0 && <PredictedList predicted={view.impact.predicted} />}
-          {view.impact && (
+          {view.impact && !clear && (
             <>
               <h3>
                 Impacted doc sections ({view.impact.totalSections})
@@ -111,7 +132,18 @@ export function CheckResults({ view, packageRepo }: { view: CheckView; packageRe
             </>
           )}
           {view.impact?.mismatched && view.impact.mismatched.length > 0 && <MismatchedList mismatched={view.impact.mismatched} />}
-          {view.cleared && <ClearedList cleared={view.cleared} />}
+          {view.impact && clear && <ChangedList view={view} />}
+          {view.cleared &&
+            (clear && view.cleared.length ? (
+              <details className="changed cleared-all">
+                <summary>
+                  Cleared: {view.cleared.length} changed symbol{view.cleared.length === 1 ? '' : 's'} reach{view.cleared.length === 1 ? 'es' : ''} no doc within 3 call hops
+                </summary>
+                <ClearedList cleared={view.cleared} />
+              </details>
+            ) : (
+              <ClearedList cleared={view.cleared} />
+            ))}
         </div>
       </div>
     </section>

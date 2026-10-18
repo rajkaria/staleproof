@@ -1,7 +1,7 @@
 import type { PrFindings } from '../agent/graph-check.js';
 import { formatMarkdown } from '../lint/format.js';
 import type { VerdictRow } from '../patch.js';
-import { commitLabel } from './text.js';
+import { allClearLine, commitLabel } from './text.js';
 import type { ExampleRunRow } from './report.js';
 import type { ClearedSymbol, ImpactData, RankedSection } from '../tools/graph-tools.js';
 
@@ -91,7 +91,9 @@ export function checkMarkdown(opts: {
       : n
         ? `${n} doc section${n === 1 ? '' : 's'} ${subject} can make false`
         : `no docs reach the code ${subject} changed`;
-  const out: string[] = [COMMENT_MARKER, `### Staleproof: ${title}`, '', opts.summary, ''];
+  // Nothing found: one plain line leads; the cleared symbols stay collapsed below.
+  const clear = breaks || runs.some((r) => r.verdict === 'fails' || r.verdict === 'changed-failure') ? undefined : allClearLine(impact, opts.newFindings);
+  const out: string[] = [COMMENT_MARKER, `### Staleproof: ${title}`, '', clear ?? opts.summary, ''];
   // Above the graph's impact: these are certain (the reference is wrong at the head commit).
   if (wrong) out.push(newFindingsMarkdown(opts.newFindings!, subject), '');
   if (predicted.length) {

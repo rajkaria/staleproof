@@ -64,7 +64,10 @@ export function finish(model: LintModel, raw: PageFinding[]): Finding[] {
   for (const { page, f } of raw) {
     if (!model.enabled(f.rule) || isSuppressed(page.doc, f.span.line, f.rule)) continue;
     const setting = model.config?.rules?.[f.rule];
-    const severity: Severity = setting && setting !== 'off' ? setting : RULE_BY_ID.get(f.rule)!.severity;
+    const level: Severity = setting && setting !== 'off' ? setting : RULE_BY_ID.get(f.rule)!.severity;
+    // A check may lower one finding's level (an anchor another docs site resolves), never raise it.
+    const RANK: Record<Severity, number> = { info: 0, warning: 1, error: 2 };
+    const severity: Severity = f.severity && RANK[f.severity] < RANK[level] ? f.severity : level;
     const key = `${f.rule}\0${page.target.path}\0${f.subject}`;
     const n = occurrences.get(key) ?? 0;
     occurrences.set(key, n + 1);

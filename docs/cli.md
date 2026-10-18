@@ -52,7 +52,7 @@ The first checks the working tree of the checkout you are in (uncommitted and un
 
 | How | Command | Notes |
 |---|---|---|
-| No install | `npx -y staleproof <command>` | `-y` answers npx's install prompt. Pin a version for repeatable runs: `npx -y staleproof@0.6.1 <command>`. |
+| No install | `npx -y staleproof <command>` | `-y` answers npx's install prompt. Pin a version for repeatable runs: `npx -y staleproof@0.7.0 <command>`. |
 | Global install | `npm install -g staleproof`, then `staleproof <command>` | Puts `staleproof` on your `PATH`. |
 | From a clone | `npm install && npm run build`, then `node dist/cli.js <command>` | Or `npm run dev -- <command>` to run the TypeScript source. |
 
@@ -509,6 +509,7 @@ staleproof init [options] [dir]
 | `.pre-commit-config.yaml` | it exists, or the repository is Python | The [`staleproof` hook](pre-commit.md), in the file's own list style |
 | `lefthook.yml` or `.husky/pre-commit` | either exists (and pre-commit is not used) | `staleproof lint --new --staged` on commit |
 | `.gitignore` | it does not ignore `.staleproof/` | `.staleproof/` (the parse cache) |
+| `.vscode/extensions.json` | it does not recommend the extension yet (a file with comments is left alone) | `staleproof.staleproof` added to `recommendations`, so VS Code and Cursor offer the [extension](editors.md#vs-code-cursor-and-windsurf) |
 | `.claude/settings.json`, `.cursor/hooks.json` | `--claude`, `--cursor` | The agent hooks |
 
 **Examples.**

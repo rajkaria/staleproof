@@ -184,7 +184,12 @@ export function outsideFixesMarkdown(outside: readonly Finding[], opts: { comman
 /** A GitHub client: the Action's GITHUB_TOKEN or the App's installation token, and an injectable fetch. */
 export interface SuggestionClient extends GitHubOptions {
   token: string;
-  /** Only comments by this login count as earlier Staleproof comments (default: any comment carrying the marker). */
+  /**
+   * Our own login: only its comments are updated or superseded (default: the token's own login
+   * when it is a person's, else any bot account's). Another bot's comment carrying the marker
+   * (the Action's when the App runs too) counts as already there only when its findings, lines
+   * and body match; another person's comment never counts.
+   */
   author?: string;
 }
 
@@ -202,7 +207,7 @@ export interface PostResult {
   created: number;
   /** Earlier comments on the same lines whose body changed. */
   updated: number;
-  /** Earlier comments already saying the same thing. */
+  /** Earlier comments already saying the same thing (ours, or another Staleproof account's). */
   unchanged: number;
   /** Earlier comments on current lines at a different range, marked superseded. */
   superseded: number;
@@ -216,7 +221,23 @@ interface GhReviewComment {
   path: string;
   line: number | null;
   start_line: number | null;
-  user: { login: string } | null;
+  user: { login: string; type?: string } | null;
+}
+
+/** A bot account (`github-actions[bot]`, `staleproof[bot]`): people cannot have `[bot]` in a login. */
+function isBot(user: GhReviewComment['user']): boolean {
+  return !!user && (user.type === 'Bot' || /\[bot\]$/.test(user.login));
+}
+
+const sameText = (a: string, b: string) => a.replace(/\r\n?/g, '\n').trim() === b.replace(/\r\n?/g, '\n').trim();
+
+/** The token's own login (a personal token); undefined for GITHUB_TOKEN and installation tokens, which cannot read `GET /user`. */
+async function tokenLogin(client: SuggestionClient): Promise<string | undefined> {
+  try {
+    return (await githubJson<{ login?: string }>('/user', client)).login || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 const MARKER_RE = new RegExp(`<!--\\s*${SUGGESTION_MARKER}\\s+fp=([0-9a-f,]+)(\\s+superseded)?\\s*-->`);
@@ -250,15 +271,22 @@ export async function fetchChangedLines(pr: Omit<PullTarget, 'headSha'>, client:
  * Post the plan as one review on the head commit. An earlier Staleproof comment for the same
  * findings on the same current lines is updated in place (or left when it already says the
  * same); one on current lines at another range is marked superseded; outdated ones are left.
+ * The Action and the App can both run on one repository: the other one's identical suggestion
+ * on the same lines counts as already there and is never edited. People's comments never count.
  */
 export async function postSuggestions(plan: SuggestionPlan, pr: PullTarget, client: SuggestionClient): Promise<PostResult> {
   const result: PostResult = { created: 0, updated: 0, unchanged: 0, superseded: 0, skipped: 0 };
   const base = `/repos/${pr.owner}/${pr.repo}/pulls`;
   const send = <T>(path: string, method: string, body: unknown) => githubJson<T>(path, client, { method, body: JSON.stringify(body) });
-  const existing = (await listPages<GhReviewComment>(`${base}/${pr.number}/comments`, client))
-    .filter((c) => !client.author || c.user?.login === client.author)
+  const live = (await listPages<GhReviewComment>(`${base}/${pr.number}/comments`, client))
     .map((c) => ({ c, fps: markerFingerprints(c.body ?? '') }))
     .filter((x): x is { c: GhReviewComment; fps: string[] } => !!x.fps && x.c.line !== null);
+  // A person's marker comment is ours only when the token is that person's (the Action's
+  // `github-token` set to a personal token): ask who we are, once, only when there is one.
+  const self = client.author ?? (live.some((x) => !isBot(x.c.user)) ? await tokenLogin(client) : undefined);
+  const ours = (x: { c: GhReviewComment }) => (self ? x.c.user?.login === self : isBot(x.c.user));
+  const existing = live.filter(ours);
+  const others = live.filter((x) => !ours(x) && isBot(x.c.user));
 
   const fresh: SuggestionComment[] = [];
   const claimed = new Set<number>();
@@ -289,6 +317,20 @@ export async function postSuggestions(plan: SuggestionPlan, pr: PullTarget, clie
       } catch {
         // Fall through: post it as a new comment.
       }
+    }
+    // Another Staleproof account (the Action, when the App runs too) already posted exactly this.
+    const twin = others.find(
+      (x) =>
+        x.c.path === comment.path &&
+        x.c.line === comment.line &&
+        (x.c.start_line ?? undefined) === comment.start_line &&
+        x.fps.length === comment.fingerprints.length &&
+        x.fps.every((fp) => comment.fingerprints.includes(fp)) &&
+        sameText(x.c.body ?? '', comment.body),
+    );
+    if (twin) {
+      result.unchanged++;
+      continue;
     }
     fresh.push(comment);
   }

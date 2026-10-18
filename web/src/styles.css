@@ -1228,6 +1228,14 @@ dd {
   letter-spacing: -0.035em;
   margin: 18px 0 18px;
 }
+.hero-agents {
+  margin: -8px 0 0;
+  color: var(--text-2);
+  font-size: 0.93em;
+}
+.hero-agents code {
+  font-size: 0.92em;
+}
 .grad {
   background: linear-gradient(100deg, var(--grad-a), var(--grad-b));
   -webkit-background-clip: text;
@@ -2477,20 +2485,74 @@ table.compare thead .us {
   letter-spacing: -0.02em;
   line-height: 1.12;
 }
-.install-jump {
+.btn-lg {
+  padding: 14px 24px;
+  font-size: 1.05em;
+  border-radius: 12px;
+}
+.install-primary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 26px;
+  justify-items: start;
+  gap: 14px;
+  margin-top: 22px;
 }
-.install-option {
+.install-primary .lede {
+  margin: 0;
+}
+.install-also {
+  margin: 18px 0 0;
+}
+.install-honest {
+  border-left: 3px solid var(--brand);
+  padding: 2px 0 2px 12px;
+}
+.install-copy > p.install-honest {
+  color: var(--text);
+}
+.ways-toc {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 16px;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  list-style: none;
+  counter-reset: way;
+  padding: 0;
+  margin: 0 0 8px;
 }
-.install-option strong {
-  margin-top: 4px;
+.ways-toc li {
+  counter-increment: way;
+}
+.ways-toc a {
+  display: inline-flex;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9em;
+}
+.ways-toc a::before {
+  content: counter(way);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.ways-toc a:hover {
+  border-color: var(--brand);
+  text-decoration: none;
+}
+.way {
+  padding: 40px 0 0;
+  margin-top: 40px;
+  border-top: 1px solid var(--border);
+}
+.way h3 {
+  margin: 4px 0 10px;
+  font-size: 1.35em;
+  letter-spacing: -0.015em;
+}
+.way h4 {
+  margin: 22px 0 6px;
+  font-size: 1em;
 }
 .install-grid {
   display: grid;
@@ -2504,12 +2566,6 @@ table.compare thead .us {
 }
 .install-copy > p {
   color: var(--text-2);
-}
-.app-install {
-  margin: 1rem 0 1.5rem;
-}
-.app-install p {
-  margin-top: 0.5rem;
 }
 .install-preview {
   display: grid;
@@ -2722,8 +2778,9 @@ ul.plain {
   }
 }
 @media (max-width: 640px) {
-  .install-jump {
-    grid-template-columns: minmax(0, 1fr);
+  .way {
+    padding-top: 28px;
+    margin-top: 28px;
   }
   .hide-sm {
     display: none;

@@ -3,7 +3,7 @@ import { existsSync, statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join, posix } from 'node:path';
 import { promisify } from 'node:util';
-import { scanDoc } from '../indexer/markdown.js';
+import { scanDoc, slugify } from '../indexer/markdown.js';
 
 const run = promisify(execFile);
 
@@ -17,6 +17,7 @@ export class RepoFacts {
   readonly topLevel = new Set<string>();
   private lineCounts = new Map<string, Promise<number | undefined>>();
   private anchorSets = new Map<string, Promise<Set<string> | undefined>>();
+  private headingLists = new Map<string, { text: string; list: { anchor: string; title: string }[] }>();
   private ignored = new Set<string>();
   /** Paths git history says were deleted (path → short sha of the commit). */
   readonly deleted = new Map<string, string>();
@@ -185,6 +186,49 @@ export class RepoFacts {
     }
     return p;
   }
+
+  /**
+   * Headings of a Markdown page in order: the GitHub anchor and the heading text. Kept per
+   * text, so an editor buffer that changes (the language server's facts) is read again.
+   */
+  async headings(path: string): Promise<{ anchor: string; title: string }[] | undefined> {
+    if (!/\.(md|mdx|markdown)$/i.test(path)) return undefined;
+    const t = await this.text(path);
+    if (t === undefined) return undefined;
+    const hit = this.headingLists.get(path);
+    if (hit?.text === t) return hit.list;
+    const list = scanDoc(path, t)
+      .sections.filter((s) => s.level > 0 && s.title)
+      .map((s) => ({ anchor: s.anchor, title: s.title }));
+    this.headingLists.set(path, { text: t, list });
+    return list;
+  }
+
+  /**
+   * The heading an anchor names under another slugger (one that keeps punctuation, drops
+   * emoji differently or collapses dashes): the anchor and the heading text agree once
+   * every run of characters other than letters and digits is one `-`. The first such heading.
+   * A heading with an explicit id (`{#id}`) is not one: its anchor is the id on every site, so
+   * a link spelling its text is broken, not another slugger's.
+   */
+  async headingForAnchor(path: string, anchor: string): Promise<{ anchor: string; title: string } | undefined> {
+    const want = looseSlug(anchor);
+    if (!want) return undefined;
+    return (await this.headings(path))?.find((h) => {
+      const slug = slugify(h.title);
+      const fromText = h.anchor === slug || h.anchor.startsWith(`${slug}-`) && /^\d+$/.test(h.anchor.slice(slug.length + 1));
+      return fromText && looseSlug(h.title) === want;
+    });
+  }
+}
+
+/** A heading or anchor with case, punctuation and spacing differences removed: `I’ve updated, but` → `i-ve-updated-but`. */
+export function looseSlug(text: string): string {
+  return text
+    .normalize('NFC')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 /** `a/./b/../c` → `a/c`; undefined when it climbs above the repository root. */

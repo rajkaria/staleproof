@@ -60,6 +60,42 @@ export function clearanceText(cleared: ClearedSymbol[]): string {
   return out.join('\n');
 }
 
+/**
+ * The one-line verdict when there is nothing to report: no doc section reached, no example
+ * predicted to break or already out of date, and no docs reference made wrong. "All clear"
+ * only when the docs references were checked too; undefined when anything was found. The
+ * cleared symbols (with their grep lines) go under it, never in it.
+ */
+export function allClearLine(
+  impact: Pick<ImpactData, 'pr' | 'changed' | 'totalSections' | 'predicted' | 'mismatched'>,
+  newFindings?: Pick<PrFindings, 'total' | 'fixed'>,
+): string | undefined {
+  if (impact.totalSections || impact.predicted?.length || impact.mismatched?.length || newFindings?.total) return undefined;
+  const local = impact.pr.state === 'local';
+  const subject = local ? 'these changes' : 'this pull request';
+  const changed = impact.changed.filter((c) => c.change !== 'added').length;
+  const added = impact.changed.length - changed;
+  const what = changed
+    ? `the ${changed === 1 ? 'changed symbol reaches' : `${changed} changed symbols reach`} no docs`
+    : added
+      ? `${subject} only add${local ? '' : 's'} new symbols (${added}), which cannot make an existing doc false`
+      : `${subject} touch${local ? '' : 'es'} no Python, TypeScript or JavaScript symbol`;
+  if (!newFindings) return `${what[0]!.toUpperCase()}${what.slice(1)}.`;
+  return `All clear: ${what}, and no docs reference became wrong${newFindings.fixed ? ` (${newFindings.fixed} fixed)` : ''}.`;
+}
+
+/**
+ * The terminal report when there is nothing to report: the all-clear line first, the cleared
+ * symbols (with the grep that checks each) indented under it. Undefined when anything was found.
+ */
+export function allClearText(impact: ImpactData, cleared: ClearedSymbol[], newFindings?: Pick<PrFindings, 'total' | 'fixed'>): string | undefined {
+  const line = allClearLine(impact, newFindings);
+  if (!line) return undefined;
+  const out = [bold(green(line))];
+  if (cleared.length) out.push(clearanceText(cleared).split('\n').map((l) => `  ${l}`).join('\n'));
+  return out.join('\n');
+}
+
 const STATUS = { pass: green('PASS'), fail: red('FAIL'), timeout: red('TIMEOUT'), skipped: dim('SKIPPED'), error: yellow('ERROR') } as const;
 
 export function runText(d: RunExampleData): string {

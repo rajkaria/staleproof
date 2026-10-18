@@ -40,8 +40,11 @@ The VS Code extension finds it by itself (below). Other editors take the command
 
 ## VS Code, Cursor and Windsurf
 
-Install **Staleproof** from the Visual Studio Marketplace (VS Code) or Open VSX (Cursor, Windsurf, VSCodium),
-or a `.vsix` with **Extensions: Install from VSIX...**. It starts the server from, in order: the
+Install **Staleproof** (`staleproof.staleproof`) from the
+[Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=staleproof.staleproof) (VS Code)
+or [Open VSX](https://open-vsx.org/extension/staleproof/staleproof) (Cursor, Windsurf, VSCodium): search
+for Staleproof in the Extensions view, or run `code --install-extension staleproof.staleproof`. A `.vsix`
+works too, with **Extensions: Install from VSIX...**. It starts the server from, in order: the
 `staleproof.path` setting, the workspace's `node_modules/.bin/staleproof`, a `staleproof` on the PATH, and
 `npx -y staleproof@<the version the extension was built for>`. An install too old to have `lsp` is passed
 over.
@@ -57,7 +60,7 @@ Commands: **Staleproof: Fix all in file**, **Staleproof: Audit workspace**, **St
 server**, **Staleproof: Show output**. To fix on save, add `"source.fixAll.staleproof": "explicit"` to
 `editor.codeActionsOnSave`.
 
-A team can recommend it in `.vscode/extensions.json`:
+A team can recommend it in `.vscode/extensions.json` (`npx staleproof init` adds it):
 
 ```json
 { "recommendations": ["staleproof.staleproof"] }
