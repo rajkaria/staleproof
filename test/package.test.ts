@@ -67,7 +67,7 @@ describe('package', () => {
     const entry = join(root, 'web', 'src', 'prerender.tsx');
     const { renderStatic } = (await import(entry)) as { renderStatic(): string };
     const html = renderStatic();
-    for (const text of ['Every merge can make a tutorial lie', 'FalkorDB/falkordb-py#262', 'himport_registry', 'How it works', 'Use cases', '/llms.txt', '#/docs/getting-started']) {
+    for (const text of ['Docs that stay', 'FalkorDB/falkordb-py#262', 'himport_registry', 'How it works', 'Use cases', '/llms.txt', '#/docs/getting-started']) {
       expect(html).toContain(text);
     }
     expect(html).not.toMatch(/undefined|NaN|\[object Object\]/);
