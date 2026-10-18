@@ -125,8 +125,10 @@ export function Icon({ name, size = 18 }: { name: keyof typeof ICONS | string; s
 export function Logo({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-      <rect width="32" height="32" rx="8" fill="var(--brand)" />
-      <path d="M9 9v14h6M17 9h6M17 16h6M17 23h6" stroke="var(--brand-ink)" strokeWidth="2.6" strokeLinecap="round" fill="none" />
+      <rect width="32" height="32" rx="8" fill="#2a4fe6" />
+      <path d="M10 6.5h8.5L24 12v13.5H10z" fill="none" stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M18.5 6.5V12H24" fill="none" stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M13 18.5l3 3 5.5-6" fill="none" stroke="#8ff2ff" strokeWidth="2.7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

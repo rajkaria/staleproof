@@ -8,32 +8,26 @@ import { CodeBlock, CopyButton, Icon } from './layout';
  * LLMs that don't run JavaScript read the whole page). The live parts — the
  * demo and the graph stats — come in as slots and are absent at build time.
  *
- * Every number here is from docs/FACTS.md, generated from the graph.
+ * Every number here is from docs/FACTS.md or the Drift Hall (web/public/drift-hall.json).
  */
 export function Landing({ demo, stats }: { demo?: ReactNode; stats?: ReactNode }) {
   return (
     <div className="landing">
       <Hero />
-      <Results />
+      <Proof />
       <section id="try" className="band try-band">
         <div className="wrap">
-          <SectionHead
-            eyebrow="Try it"
-            title="Check any pull request"
-            lede="Paste a pull request from any public Python, TypeScript or JavaScript repository on GitHub: the first check indexes it, in seconds for most projects. Or pick one of FalkorDB's. The trace streams every tool call and the Cypher it ran on FalkorDB."
-          />
+          <SectionHead eyebrow="Try it" title="Check any pull request" lede="Paste a pull request from any public Python, TypeScript or JavaScript repository. The first check indexes it in seconds." />
           <Modes />
           {stats}
           {demo ?? <StaticDemo />}
         </div>
       </section>
-      <Problem />
+      <Who />
+      <Why />
       <HowItWorks />
-      <UseCases />
-      <Benefits />
       <Integrations />
       <Compare />
-      <ForLlms />
       <Faq />
       <FinalCta />
     </div>
@@ -50,150 +44,127 @@ function SectionHead({ eyebrow, title, lede, center }: { eyebrow: string; title:
   );
 }
 
+const PR = 'https://github.com/FalkorDB/falkordb-py/pull/262';
+const INSTALL_CMD = `npx -y ${PACKAGE} check ${PR}`;
+
 function Hero() {
   return (
     <section className="hero-band">
       <div className="hero-bg" aria-hidden="true" />
       <div className="wrap hero-grid">
         <div className="hero-copy">
-          <a className="pill-link" href="#/docs/introduction">
-            <span className="dot" /> Open source · MIT · built on FalkorDB <Icon name="arrow" size={14} />
-          </a>
           <h1>
-            Every merge can make a tutorial lie. <span className="grad">{PRODUCT} finds which one, proves it, and fixes it.</span>
+            Docs that stay <span className="grad">true to your code.</span>
           </h1>
           <p className="lede">
-            Paste a pull request. {PRODUCT} follows the changed code through a FalkorDB graph of every repository you own — code, docs and the decisions your
-            maintainers made — to the paragraphs it can make false. It runs those examples before and after the change, and proposes the docs fix with the
-            evidence behind each edit.
+            {PRODUCT} follows every pull request through a graph of your code and docs to the paragraphs it makes false, runs the examples to prove it, and
+            writes the fix.
           </p>
           <p className="hero-agents">
-            It also checks the files AI coding agents read: a command, link or env var in <code>AGENTS.md</code>, <code>CLAUDE.md</code> or your
-            Cursor and Copilot rules that no longer matches the repository is flagged like any other stale doc, and a missing path is noted at lower confidence.{' '}
-            <a href="#/docs/lint">How lint works</a>
+            It also checks the files AI coding agents read: a stale command, link or env var in <code>AGENTS.md</code>, <code>CLAUDE.md</code> or your Cursor and
+            Copilot rules is flagged like any other doc. <a href="#/docs/lint">How lint works</a>
           </p>
           <div className="cta-row">
-            <a className="btn btn-primary" href="#/install">
-              <Icon name="github" /> Add to GitHub in one click
+            <a className="btn btn-primary btn-lg" href="#/install">
+              <Icon name="github" /> Add to GitHub
             </a>
-            <a className="btn btn-ghost" href="#/try">
+            <a className="btn btn-ghost btn-lg" href="#/try">
               <Icon name="play" /> Check a pull request
-            </a>
-            <a className="btn btn-ghost" href="#/audit">
-              <Icon name="eye" /> Audit a repository
             </a>
           </div>
           <div className="install">
             <span className="prompt">$</span>
-            <code>npx -y {PACKAGE} check https://github.com/FalkorDB/falkordb-py/pull/262</code>
-            <CopyButton text={`npx -y ${PACKAGE} check https://github.com/FalkorDB/falkordb-py/pull/262`} label="Copy command" />
+            <code>{INSTALL_CMD}</code>
+            <CopyButton text={INSTALL_CMD} label="Copy command" />
           </div>
+          <ul className="hero-facts" aria-label="At a glance">
+            <li>
+              <Icon name="check" size={14} /> Open source, MIT
+            </li>
+            <li>
+              <Icon name="check" size={14} /> No model key needed
+            </li>
+            <li>
+              <Icon name="check" size={14} /> Python · TypeScript · JavaScript · Go
+            </li>
+          </ul>
         </div>
-        <WorkedExample />
+        <Trace />
       </div>
     </section>
   );
 }
 
-/** The first-screen proof: falkordb-py#262, as the graph and the runs saw it. */
-function WorkedExample() {
+/** The first-screen proof: falkordb-py#262, drawn as the graph and the runs saw it. */
+function Trace() {
   return (
-    <figure className="worked" aria-label="Worked example: falkordb-py pull request 262">
-      <figcaption className="worked-head">
-        <span className="worked-pr">
-          <Icon name="pr" size={16} /> FalkorDB/falkordb-py#262
+    <figure className="trace" aria-label="Worked example: falkordb-py pull request 262">
+      <figcaption className="trace-head">
+        <span className="trace-pr">
+          <Icon name="pr" size={15} /> FalkorDB/falkordb-py#262
         </span>
-        <span className="worked-title">fix: only forward accepted kwargs from Is_Cluster to redis.Redis</span>
+        <span className="trace-title">fix: only forward accepted kwargs from Is_Cluster</span>
       </figcaption>
-      <ol className="chain">
-        <li>
-          <span className="chain-kind">changed</span>
+      <ol className="flow">
+        <li className="node is-changed">
+          <span className="node-kind">changed</span>
           <code>Is_Cluster</code>
-          <span className="chain-repo">falkordb-py</span>
         </li>
-        <li>
-          <span className="chain-kind">called by</span>
+        <li className="node">
+          <span className="node-kind">called by</span>
           <code>FalkorDB.__init__</code>
-          <span className="chain-repo">falkordb-py</span>
         </li>
-        <li className="chain-doc">
-          <span className="chain-kind">used in</span>
+        <li className="node is-doc">
+          <span className="node-kind">used in</span>
           <code>README · Asynchronous Example</code>
-          <span className="chain-repo">falkordb-py</span>
         </li>
       </ol>
       <div className="runs">
         <div className="run-row fail">
-          <span className="run-side">before the PR</span>
+          <span className="run-side">before</span>
           <span className="run-status">fails</span>
-          <code>TypeError: Redis.__init__() got an unexpected keyword argument 'himport_registry'</code>
+          <code>TypeError: unexpected keyword argument 'himport_registry'</code>
         </div>
         <div className="run-row pass">
-          <span className="run-side">after the PR</span>
+          <span className="run-side">after</span>
           <span className="run-status">passes</span>
           <code>exit 0</code>
         </div>
       </div>
-      <p className="worked-verdict">
-        <Icon name="check" size={16} /> The README's async example was broken until this PR fixed it. A name search finds nothing: no doc mentions{' '}
-        <code>Is_Cluster</code>. The call graph does.
+      <p className="trace-verdict">
+        <Icon name="check" size={15} />
+        <span>
+          No doc names <code>Is_Cluster</code>, so a search finds nothing. The call graph finds the README.
+        </span>
       </p>
     </figure>
   );
 }
 
-function Results() {
-  const tiles: { value: string; label: ReactNode; foot: string }[] = [
-    { value: '43', label: <>doc sections one pull request can falsify — <strong>41 of them in other repositories</strong></>, foot: 'falkordb-py#276' },
-    { value: '0 / 47', label: <>sections a grep for the changed names finds, of the 47 the graph reaches</>, foot: 'falkordb-py #262 · #267 · #276' },
-    { value: '120 vs 30', label: <>sections reached by the graph vs found by grep, which also matches <strong>227 unrelated</strong> ones</>, foot: 'all 4 checked pull requests' },
-    { value: '21', label: <>docs examples tried at both commits of one PR: 10 pass both times, 6 were already broken</>, foot: 'falkordb-py#276' },
+function Proof() {
+  const tiles: { value: string; label: ReactNode; foot: string; href: string }[] = [
+    { value: '33 / 34', label: <>findings confirmed real on 18 repositories {PRODUCT} had never seen</>, foot: 'Drift Hall · held-out', href: '#/drift' },
+    { value: '41 of 43', label: <>doc sections one pull request falsified were in other repositories</>, foot: 'falkordb-py#276', href: '#/docs/facts' },
+    { value: '0 / 47', label: <>of the sections the graph reaches would be found by a grep for the changed names</>, foot: 'falkordb-py #262 · #267 · #276', href: '#/docs/facts' },
+    { value: '~1 ms', label: <>to answer "which paragraphs can this change make false?" on FalkorDB</>, foot: 'impact query', href: '#/model' },
   ];
   return (
     <section className="band results-band" aria-labelledby="results-title">
       <div className="wrap">
         <div className="results-head">
-          <h2 id="results-title">What it found on FalkorDB's own repositories</h2>
-          <a href="#/docs/facts">
-            Every number comes from FACTS.md, generated from the graph <Icon name="arrow" size={14} />
+          <h2 id="results-title">Measured, not promised</h2>
+          <a href="#/drift">
+            Every false positive is counted in the open on the Drift Hall <Icon name="arrow" size={14} />
           </a>
         </div>
         <div className="tiles">
           {tiles.map((t) => (
-            <div key={t.value} className="tile">
+            <a key={t.value} className="tile" href={t.href}>
               <div className="tile-value">{t.value}</div>
               <div className="tile-label">{t.label}</div>
               <div className="tile-foot">{t.foot}</div>
-            </div>
+            </a>
           ))}
-        </div>
-        <div className="stories">
-          <article>
-            <h3>
-              <a href="https://github.com/FalkorDB/falkordb-py/pull/267" target="_blank" rel="noreferrer">
-                falkordb-py#267
-              </a>{' '}
-              fixed the execution-plan parser
-            </h3>
-            <p>
-              The path <code>ExecutionPlan._operation_tree ← ExecutionPlan.__init__ ← Graph.explain</code> led into a different repository: the docs site's{' '}
-              <code>GRAPH.EXPLAIN</code> page. Its example fails on a fresh server before <em>and</em> after the PR — it explains a query on a graph the page never
-              creates. Not caused by the PR; already broken, and now known.
-            </p>
-          </article>
-          <article>
-            <h3>
-              <a href="https://github.com/FalkorDB/falkordb-py/pull/276" target="_blank" rel="noreferrer">
-                falkordb-py#276
-              </a>{' '}
-              changed four asyncio symbols
-            </h3>
-            <p>
-              They reach 43 doc sections through paths like <code>AsyncGraph.query ← FalkorDBConnection.query (GraphRAG-SDK) ← … ← GraphRAG-SDK README</code>. Of the
-              21 examples run at both commits, 10 pass both times, 6 were already broken, 3 can't be installed together at those commits (version skew) and 2 can't
-              run as written.
-            </p>
-          </article>
         </div>
       </div>
     </section>
@@ -204,17 +175,17 @@ function Modes() {
   return (
     <div className="modes-explainer">
       <div>
-        <Icon name="model" />
-        <div>
-          <strong>Agent mode</strong>
-          <p>A model chooses which tools to call, reads each affected section, and writes a verdict or an edit for every one of them.</p>
-        </div>
-      </div>
-      <div>
         <Icon name="graph" />
         <div>
           <strong>Graph mode</strong>
-          <p>The same tools in a fixed order with no model and no API key: impact, clearance, ranking, and a sample of up to three example runs. Deterministic and free.</p>
+          <p>Impact, clearance, ranking and example runs in a fixed order. No model, no key, deterministic.</p>
+        </div>
+      </div>
+      <div>
+        <Icon name="model" />
+        <div>
+          <strong>Agent mode</strong>
+          <p>A model reads each affected section and writes a verdict or an edit for every one.</p>
         </div>
       </div>
     </div>
@@ -224,7 +195,7 @@ function Modes() {
 /** Shown where the live demo goes when the page is read without JavaScript. */
 function StaticDemo() {
   const prs = [
-    ['FalkorDB/falkordb-py#262', 'fix: only forward accepted kwargs from Is_Cluster to redis.Redis', 'https://github.com/FalkorDB/falkordb-py/pull/262'],
+    ['FalkorDB/falkordb-py#262', 'fix: only forward accepted kwargs from Is_Cluster to redis.Redis', PR],
     ['FalkorDB/falkordb-py#267', 'test: assert the client parses execution plans, and fix a plan parser bug', 'https://github.com/FalkorDB/falkordb-py/pull/267'],
     ['FalkorDB/falkordb-py#276', 'fix(asyncio): prevent connection pool kwargs mutation and await schema refresh', 'https://github.com/FalkorDB/falkordb-py/pull/276'],
   ];
@@ -242,25 +213,60 @@ function StaticDemo() {
   );
 }
 
-function Problem() {
-  const items: [string, string, ReactNode][] = [
-    ['repos', 'The paragraph is in another repository', <>A change to the client breaks a tutorial in the SDK and a page on the docs site. Code review only sees the repository the PR is in.</>],
-    ['path', 'Nobody greps for the right name', <>The README calls <code>FalkorDB()</code>, whose constructor calls the function you changed. The docs never name that function, so search finds nothing.</>],
-    ['play', 'Nobody re-runs the examples', <>Tutorials are code that never runs in CI. They break silently, and readers find out first.</>],
-  ];
+const AUDIENCES: { icon: string; who: string; body: ReactNode; proof: ReactNode; via: [string, string] }[] = [
+  {
+    icon: 'repos',
+    who: 'Library and SDK maintainers',
+    body: <>Your client, the SDK built on it and the docs site are three repositories. A change in the first surfaces the pages in the other two.</>,
+    proof: <>41 of 43 sections falkordb-py#276 reached were in other repositories.</>,
+    via: ['GitHub App', '#/docs/github-app'],
+  },
+  {
+    icon: 'bot',
+    who: 'Teams coding with AI agents',
+    body: (
+      <>
+        Claude Code, Cursor and Copilot read <code>AGENTS.md</code> and <code>CLAUDE.md</code>. {PRODUCT} keeps those files true, and answers your agent over
+        MCP before it changes a function.
+      </>
+    ),
+    proof: <>docs_for_symbol, check_changes and the docs patch, in the same session as the code.</>,
+    via: ['MCP server', '#/docs/mcp'],
+  },
+  {
+    icon: 'people',
+    who: 'DevRel and docs teams',
+    body: <>Know what a release falsified, most-read page first, and ship one patch with the evidence behind every edit.</>,
+    proof: <>An audit lists the public API no page covers, and every example that no longer fits the code.</>,
+    via: ['Audit a repository', '#/audit'],
+  },
+  {
+    icon: 'pr',
+    who: 'Open-source maintainers',
+    body: <>A docs check on every pull request: the sections it can make false, the path for each, and a button that applies the fix.</>,
+    proof: <>Beta rules only inform. Nothing fails a check until the Drift Hall shows it at 80% precision or better.</>,
+    via: ['GitHub Action', '#/docs/github-action'],
+  },
+];
+
+function Who() {
   return (
-    <section className="band" id="problem">
+    <section className="band" id="use-cases">
       <div className="wrap">
-        <SectionHead eyebrow="The problem" title="Docs drift where review can't see it" />
-        <div className="grid3">
-          {items.map(([icon, title, body]) => (
-            <div key={title} className="card">
+        <SectionHead eyebrow="Who it's for" title="Anyone whose docs live apart from their code" />
+        <div className="audiences">
+          {AUDIENCES.map((a) => (
+            <article key={a.who} className="audience">
               <span className="card-icon">
-                <Icon name={icon} />
+                <Icon name={a.icon} />
               </span>
-              <h3>{title}</h3>
-              <p>{body}</p>
-            </div>
+              <h3>{a.who}</h3>
+              <p>{a.body}</p>
+              <p className="proof">{a.proof}</p>
+              <a className="audience-link" href={a.via[1]}>
+                {a.via[0]} <Icon name="arrow" size={14} />
+              </a>
+            </article>
           ))}
         </div>
       </div>
@@ -268,75 +274,158 @@ function Problem() {
   );
 }
 
+function Why() {
+  return (
+    <section className="band alt" id="why">
+      <div className="wrap">
+        <SectionHead eyebrow="Why it works" title="Three things a search can't do" />
+        <div className="reasons">
+          <article className="reason">
+            <ReachGraphic />
+            <h3>It follows calls, not names</h3>
+            <p>Up to three call hops from the changed function, across repositories, to the docs that use it. Grep stops at the name.</p>
+          </article>
+          <article className="reason">
+            <RunGraphic />
+            <h3>It runs the example, before and after</h3>
+            <p>Each affected example runs at both commits in a sandbox. "This PR broke it" is a test result, not a guess.</p>
+          </article>
+          <article className="reason">
+            <ReceiptGraphic />
+            <h3>Every finding carries its receipt</h3>
+            <p>The path from the change to the paragraph is shown on every hit. No path, no edit: the tool refuses.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** A changed function reaching a doc through two callers, while a search for its name misses it. */
+function ReachGraphic() {
+  return (
+    <svg className="reason-art" viewBox="0 0 320 150" role="img" aria-label="A changed function reaches a README through two callers; grep finds nothing">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0L10 5 0 10z" className="art-edge-fill" />
+        </marker>
+      </defs>
+      <g className="art-edges">
+        <path d="M70 78 L122 54" markerEnd="url(#arr)" />
+        <path d="M70 78 L122 104" markerEnd="url(#arr)" />
+        <path d="M178 54 L232 78" markerEnd="url(#arr)" />
+        <path d="M178 104 L232 78" markerEnd="url(#arr)" />
+      </g>
+      <g className="art-node changed">
+        <circle cx="46" cy="78" r="22" />
+        <text x="46" y="82">Δ fn</text>
+      </g>
+      <g className="art-node">
+        <circle cx="150" cy="48" r="20" />
+        <text x="150" y="52">caller</text>
+      </g>
+      <g className="art-node">
+        <circle cx="150" cy="110" r="20" />
+        <text x="150" y="114">caller</text>
+      </g>
+      <g className="art-node doc">
+        <rect x="236" y="56" width="70" height="44" rx="9" />
+        <text x="271" y="74">README</text>
+        <text x="271" y="90" className="art-sub">§ example</text>
+      </g>
+      <g className="art-grep">
+        <text x="46" y="128">grep "fn"</text>
+        <path d="M14 123 L78 123" />
+        <text x="46" y="143" className="art-sub">0 results</text>
+      </g>
+    </svg>
+  );
+}
+
+/** Two example runs, one failing before the change and one passing after it. */
+function RunGraphic() {
+  return (
+    <svg className="reason-art" viewBox="0 0 320 150" role="img" aria-label="The example fails before the pull request and passes after it">
+      <g className="art-term">
+        <rect x="12" y="14" width="296" height="122" rx="12" />
+        <circle cx="30" cy="30" r="4" />
+        <circle cx="44" cy="30" r="4" />
+        <circle cx="58" cy="30" r="4" />
+      </g>
+      <g className="art-line">
+        <text x="28" y="60">
+          <tspan className="art-prompt">$</tspan> run README#async <tspan className="art-dim">@ base</tspan>
+        </text>
+        <text x="28" y="80" className="art-fail">
+          ✕ TypeError: unexpected keyword argument
+        </text>
+        <text x="28" y="106">
+          <tspan className="art-prompt">$</tspan> run README#async <tspan className="art-dim">@ pr</tspan>
+        </text>
+        <text x="28" y="126" className="art-pass">
+          ✓ exit 0
+        </text>
+      </g>
+    </svg>
+  );
+}
+
+/** A finding with the evidence path attached, and the refusal when there is none. */
+function ReceiptGraphic() {
+  return (
+    <svg className="reason-art" viewBox="0 0 320 150" role="img" aria-label="A finding with its evidence path; without a path, no edit">
+      <g className="art-card">
+        <rect x="14" y="16" width="292" height="74" rx="12" />
+        <text x="30" y="40" className="art-strong">
+          README · Asynchronous Example
+        </text>
+        <text x="30" y="60" className="art-sub">
+          stale · the kwargs it passes are no longer accepted
+        </text>
+        <g className="art-path">
+          <rect x="30" y="68" width="258" height="14" rx="7" />
+          <text x="159" y="78.5">Is_Cluster → FalkorDB.__init__ → README</text>
+        </g>
+      </g>
+      <g className="art-refuse">
+        <rect x="14" y="102" width="292" height="34" rx="10" />
+        <text x="30" y="123">
+          <tspan className="art-fail">✕</tspan> no graph path to this paragraph → no edit proposed
+        </text>
+      </g>
+    </svg>
+  );
+}
+
 function HowItWorks() {
-  const steps: { icon: string; title: string; body: ReactNode; term?: [string, ReactNode] }[] = [
-    {
-      icon: 'layers',
-      title: 'Index',
-      body: <>Clone your repositories into one graph: Python and TypeScript functions and the calls between them across repositories, every docs section and code example (Markdown, MDX or Sphinx), and the code each one mentions or calls — with every call checked against the signature it reaches.</>,
-    },
-    {
-      icon: 'path',
-      title: 'Trace the impact',
-      body: <>From each function the PR changed, walk back up to three callers, in any repository, to the docs that mention or run them.</>,
-      term: ['Evidence path', <>the chain from the changed function to the paragraph — the reason it is flagged, shown for every hit.</>],
-    },
-    {
-      icon: 'lock',
-      title: 'Clear the rest',
-      body: <>Changed functions that no doc reaches within three calls are listed as cleared, with the grep a reviewer can run to double-check.</>,
-      term: ['Clearance', <>a proof of absence: the graph shows no path from the change to any doc, so you can skip it with confidence.</>],
-    },
-    {
-      icon: 'play',
-      title: 'Prove it',
-      body: <>Run each affected example at the commit before the PR and at the PR, in a sandbox. Passes before, fails after: the PR broke it. Fails both: it was already broken.</>,
-    },
-    {
-      icon: 'doc',
-      title: 'Judge and fix',
-      body: <>Every affected section ends with a verdict. Edits are refused without a graph path, and come out as a <code>git apply</code>-able docs patch with the evidence per section.</>,
-      term: ['Verdict', <>stale (with the edit), ok, governed by a maintainer decision, or skipped — always with the reason.</>],
-    },
-    {
-      icon: 'memory',
-      title: 'Remember',
-      body: <>Verdicts, example runs and maintainers' decisions are written back to the graph. The next PR reads them before judging.</>,
-      term: ['Verdict memory', <>a decision like "keep the old kwargs until 2.0" is cited instead of being re-flagged on every PR.</>],
-    },
+  const steps: { icon: string; title: string; body: ReactNode }[] = [
+    { icon: 'layers', title: 'Index', body: <>Code, docs and examples from every repository go into one FalkorDB graph, with the calls between them.</> },
+    { icon: 'path', title: 'Trace', body: <>From each changed function, walk the callers to the sections that use them. The rest is cleared, with proof.</> },
+    { icon: 'play', title: 'Prove', body: <>Run each affected example at the commit before the PR and at the PR, in a sandbox.</> },
+    { icon: 'doc', title: 'Fix', body: <>Every section gets a verdict, and a <code>git apply</code>-able patch with the evidence. Decisions are remembered for the next PR.</> },
   ];
   return (
-    <section className="band alt" id="how-it-works">
+    <section className="band" id="how-it-works">
       <div className="wrap">
-        <SectionHead
-          eyebrow="How it works"
-          title="From a pull request to a proven docs fix"
-          lede={<>Each step is a tool that runs Cypher on FalkorDB and returns the queries it ran. The agent decides the order; graph mode runs them in a fixed one.</>}
-        />
+        <SectionHead eyebrow="How it works" title="From a pull request to a proven docs fix" />
         <ol className="steps">
           {steps.map((s, i) => (
             <li key={s.title} className="step">
               <div className="step-num">
-                <Icon name={s.icon} />
+                <span className="card-icon">
+                  <Icon name={s.icon} />
+                </span>
                 <span>{String(i + 1).padStart(2, '0')}</span>
               </div>
               <h3>{s.title}</h3>
               <p>{s.body}</p>
-              {s.term && (
-                <p className="term">
-                  <strong>{s.term[0]}:</strong> {s.term[1]}
-                </p>
-              )}
             </li>
           ))}
         </ol>
         <div className="impact-query">
           <div className="impact-copy">
             <h3>The question is a graph question</h3>
-            <p>
-              "Which paragraphs, in which repositories, can this change make false?" is reachability over call edges that cross repositories. It is one Cypher
-              pattern, and on FalkorDB it answers in about a millisecond.
-            </p>
+            <p>"Which paragraphs, in which repositories, can this change make false?" is reachability over call edges. One Cypher pattern answers it.</p>
             <a href="#/model">
               The graph model and every query <Icon name="arrow" size={14} />
             </a>
@@ -357,169 +446,27 @@ RETURN d.id, length(p) AS hops,
   );
 }
 
-const USE_CASES: { icon: string; who: string; title: string; body: ReactNode; proof?: ReactNode; via: [string, string][] }[] = [
+const INTEGRATIONS: { id: string; icon: string; label: string; title: string; body: ReactNode; lang: string; file?: string; code: string; doc: string }[] = [
   {
-    icon: 'repos',
-    who: 'SDK and client-library teams',
-    title: 'Ship a client change without breaking the docs site',
-    body: <>Your client, the SDK built on it and the docs site live in three repositories. One graph spans them, so a change in the client surfaces the pages in the other two.</>,
-    proof: <>On falkordb-py#276, 41 of the 43 reachable sections were in other repositories.</>,
-    via: [
-      ['GitHub Action', '#/docs/github-action'],
-      ['CLI', '#/docs/cli'],
-    ],
-  },
-  {
-    icon: 'people',
-    who: 'DevRel and docs teams',
-    title: 'Know what a release falsified, most-read page first',
-    body: <>Check every merged pull request, rank the affected sections by PageRank over your docs' own links, and ship one patch with the evidence for each edit.</>,
-    via: [
-      ['check + patch', '#/docs/cli'],
-      ['--open-pr', '#/docs/cli'],
-    ],
-  },
-  {
-    icon: 'pr',
-    who: 'Open-source maintainers',
-    title: 'A docs-impact comment on every pull request',
-    body: <>Each PR gets a comment listing the docs it can falsify, the path for each, and the changed functions no doc reaches. Graph mode needs no LLM key.</>,
-    via: [['GitHub Action', '#/docs/github-action']],
-  },
-  {
-    icon: 'bot',
-    who: 'AI coding agents',
-    title: 'Let Claude Code fix the docs in the same session as the code',
-    body: (
-      <>
-        Over MCP, your coding agent asks which docs depend on a function before changing it (<code>docs_for_symbol</code>), which examples its edits break before
-        anything is pushed (<code>check_changes</code>), and produces the docs patch.
-      </>
-    ),
-    via: [
-      ['MCP server', '#/docs/mcp'],
-      ['Install', '#/install'],
-    ],
-  },
-  {
-    icon: 'eye',
-    who: 'Anyone with docs today',
-    title: 'Find the examples that are already broken, with no pull request',
-    body: <>An audit checks every call in every example against the current code, across repositories, scores the docs and lists the public API no page covers. Weekly in the Action, with one issue kept up to date.</>,
-    proof: <>On FalkorDB's docs it finds <code>client.create_constraint</code>, a method <code>FalkorDB</code> doesn't have; on Flask's, <code>as_view()</code> without its required <code>name</code>.</>,
-    via: [
-      ['Audit a repository', '#/audit'],
-      ['GitHub Action', '#/docs/github-action'],
-    ],
-  },
-  {
-    icon: 'layers',
-    who: 'Platform teams',
-    title: 'One graph per organisation, many on one server',
-    body: <>Each organisation gets its own graph on the same FalkorDB. Serve the API to your tools, or embed the library in your own pipeline.</>,
-    proof: <>A second graph from encode/httpx runs next to FalkorDB's on the same server.</>,
-    via: [
-      ['HTTP API', '#/docs/http-api'],
-      ['Library', '#/docs/library'],
-    ],
-  },
-];
-
-function UseCases() {
-  return (
-    <section className="band" id="use-cases">
-      <div className="wrap">
-        <SectionHead eyebrow="Use cases" title="Built for teams whose docs live apart from their code" />
-        <div className="usecases">
-          {USE_CASES.map((u) => (
-            <article key={u.title} className="card usecase">
-              <div className="usecase-who">
-                <span className="card-icon">
-                  <Icon name={u.icon} />
-                </span>
-                {u.who}
-              </div>
-              <h3>{u.title}</h3>
-              <p>{u.body}</p>
-              {u.proof && <p className="proof">{u.proof}</p>}
-              <div className="via">
-                <span>Use it via</span>
-                {u.via.map(([label, href]) => (
-                  <a key={label} href={href} className="tag">
-                    {label}
-                  </a>
-                ))}
-              </div>
-            </article>
-          ))}
-          <a className="card usecase more" href="#/docs/use-cases">
-            <h3>Read the use-case guides</h3>
-            <p>Setup, commands and what to expect for each scenario.</p>
-            <span className="more-link">
-              Use cases in the docs <Icon name="arrow" size={14} />
-            </span>
-          </a>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Benefits() {
-  const items: [string, string, string][] = [
-    ['repos', 'Across every repository', 'Call edges are resolved across repositories through imports, re-exports, attribute types and return annotations.'],
-    ['play', 'Proof by execution', 'Examples run at both commits in a sandbox, so "this PR broke it" is a test result, not a guess.'],
-    ['path', 'Evidence for every paragraph', 'Each flagged section carries the path that reached it. No path, no edit: the tool refuses.'],
-    ['lock', 'Proof of absence', 'Clearance lists changed functions no doc reaches, so reviewers know what they can skip.'],
-    ['memory', 'Remembers decisions', 'Maintainer decisions and past verdicts are cited on the next PR instead of re-flagged.'],
-    ['rank', 'Most-read pages first', 'PageRank over your docs\' links orders the work, so the page readers land on gets fixed first.'],
-    ['model', 'With or without a model', 'Agent mode uses Claude or any Anthropic-compatible API; graph mode needs no key at all.'],
-    ['eye', 'Every query in the open', 'Every result lists the Cypher it ran and how long it took. Nothing is hidden behind a score.'],
-  ];
-  return (
-    <section className="band alt" id="benefits">
-      <div className="wrap">
-        <SectionHead eyebrow="Why teams use it" title="Fewer broken tutorials, with receipts" />
-        <div className="grid4">
-          {items.map(([icon, title, body]) => (
-            <div key={title} className="benefit">
-              <span className="card-icon">
-                <Icon name={icon} />
-              </span>
-              <h3>{title}</h3>
-              <p>{body}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-const PR = 'https://github.com/FalkorDB/falkordb-py/pull/262';
-
-const INTEGRATIONS: { id: string; icon: string; label: string; title: string; body: ReactNode; lang: string; file?: string; code: string; doc: string; note?: string }[] = [
-  {
-    id: 'cli',
-    icon: 'terminal',
-    label: 'CLI',
-    title: 'One command from nothing to a checked pull request',
-    body: <>No install and no Docker: the first check starts FalkorDB locally from a Python wheel and indexes the repository (<code>--with</code> adds a docs repository). Add <code>ANTHROPIC_API_KEY</code> for agent mode, or pass <code>--no-agent</code>.</>,
-    lang: 'bash',
-    code: `$ npx -y ${PACKAGE} check ${PR} --no-agent
-
-# an organisation's repositories in one graph, then the docs patch
-$ npx -y ${PACKAGE} index FalkorDB/falkordb-py FalkorDB/GraphRAG-SDK FalkorDB/docs
-$ npx -y ${PACKAGE} check ${PR}
-$ npx -y ${PACKAGE} patch ${PR}`,
-    doc: '#/docs/cli',
+    id: 'app',
+    icon: 'github',
+    label: 'GitHub App',
+    title: 'Install once, every pull request is checked',
+    body: <>No workflow file and no secrets. Each PR gets a check with annotations, suggestions, and an Apply fixes button.</>,
+    lang: 'text',
+    file: 'github.com/apps/staleproof',
+    code: `1. Install the app on your repositories
+2. Open a pull request
+3. Read the "Staleproof" check: the docs it can make false,
+   the path for each, and the fix as a suggestion`,
+    doc: '#/docs/github-app',
   },
   {
     id: 'action',
     icon: 'pr',
     label: 'GitHub Action',
-    title: 'A comment on every pull request, in one click',
-    body: <>No inputs and no secrets: the job starts its own FalkorDB, indexes the repository, runs the affected examples before and after, and posts (or updates) one comment. The <a href="#/install">install page</a> commits this file for you.</>,
+    title: 'One step, no inputs',
+    body: <>The job starts its own FalkorDB, indexes the repository, runs the affected examples before and after, and posts one comment.</>,
     lang: 'yaml',
     file: '.github/workflows/staleproof.yml',
     code: `on:
@@ -535,28 +482,45 @@ jobs:
     doc: '#/docs/github-action',
   },
   {
+    id: 'cli',
+    icon: 'terminal',
+    label: 'CLI',
+    title: 'From nothing to a checked pull request',
+    body: <>No install and no Docker: the first check starts FalkorDB locally and indexes the repository. <code>lint</code> needs no graph at all.</>,
+    lang: 'bash',
+    code: `$ npx -y ${PACKAGE} lint            # paths, links, commands, env, symbols
+$ npx -y ${PACKAGE} check ${PR}
+$ npx -y ${PACKAGE} fix             # applies only verified fixes`,
+    doc: '#/docs/cli',
+  },
+  {
     id: 'mcp',
     icon: 'bot',
-    label: 'AI assistants (MCP)',
-    title: 'Ask Claude, Cursor or VS Code about any pull request',
-    body: <>The hosted MCP server needs nothing installed and indexes any public repository on first use; one-click buttons are on the <a href="#/install">install page</a>. Every tool description includes its Cypher, and every result lists the queries it ran.</>,
+    label: 'MCP',
+    title: 'Ask Claude Code or Cursor before you change a function',
+    body: <>The hosted server needs nothing installed and indexes any public repository on first use. Every result lists the Cypher it ran.</>,
     lang: 'bash',
-    code: `# hosted: nothing to install
-$ claude mcp add --transport http staleproof ${SITE_URL}/api/mcp
+    code: `$ claude mcp add --transport http staleproof ${SITE_URL}/api/mcp
 
-# or local, with example runs
-$ claude mcp add staleproof -- npx -y ${PACKAGE} mcp
-
-# then ask:
-> Which docs can ${PR} make false? Show the evidence path for each.`,
+> Which docs depend on Is_Cluster? Which examples do my edits break?`,
     doc: '#/docs/mcp',
+  },
+  {
+    id: 'editor',
+    icon: 'box',
+    label: 'VS Code',
+    title: 'Diagnostics as you type',
+    body: <>Findings from unsaved text, fixes as code actions, hover and go-to-definition from a doc to the code it names. Cursor, Windsurf, Zed, Neovim and JetBrains too.</>,
+    lang: 'bash',
+    code: `$ code --install-extension staleproof.staleproof`,
+    doc: '#/docs/editors',
   },
   {
     id: 'api',
     icon: 'api',
-    label: 'HTTP API',
+    label: 'API',
     title: 'Stream a check over server-sent events',
-    body: <><code>serve</code> runs this web app and its JSON API. A check streams every tool call and result as it happens, then stays stored on the graph.</>,
+    body: <><code>serve</code> runs this web app and its JSON API; the package also exports the indexer, the tools and both check modes as a library.</>,
     lang: 'bash',
     code: `$ npx -y ${PACKAGE} serve --port 8080
 $ curl -N localhost:8080/api/check \\
@@ -564,50 +528,14 @@ $ curl -N localhost:8080/api/check \\
     -d '{"pr_url": "${PR}", "mode": "graph"}'`,
     doc: '#/docs/http-api',
   },
-  {
-    id: 'library',
-    icon: 'box',
-    label: 'Node.js library',
-    title: 'Embed it in your own pipeline',
-    body: <>The package exports the indexer, the tools, both check modes, the patch builder, the MCP server and the HTTP app.</>,
-    lang: 'ts',
-    code: `import { GraphStore, loadConfig, runGraphCheck } from '${PACKAGE}';
-
-const config = loadConfig();
-const store = await GraphStore.connect(config.falkordbUrl);
-const check = await runGraphCheck({ graph: store.org(config.org), config }, '${PR}');
-console.log(check.status, check.summary);
-await store.close();`,
-    doc: '#/docs/library',
-  },
-  {
-    id: 'deploy',
-    icon: 'layers',
-    label: 'Self-host',
-    title: 'Vercel with FalkorDB Cloud, or any VM',
-    body: <>The live demo runs as a Vercel Function against FalkorDB Cloud's free tier. A Docker Compose file runs the app with its graph and a scratch database.</>,
-    lang: 'bash',
-    code: `# Vercel: point the function at your FalkorDB, then deploy
-$ vercel env add FALKORDB_URL production
-$ vercel deploy --prod
-
-# Any VM
-$ docker compose up -d --build`,
-    doc: '#/docs/deploy',
-    note: 'The Vercel deployment is live; the Docker image is written but has not been built yet.',
-  },
 ];
 
 function Integrations() {
   const [active, setActive] = useState(INTEGRATIONS[0]!.id);
   return (
-    <section className="band" id="integrations">
+    <section className="band alt" id="integrations">
       <div className="wrap">
-        <SectionHead
-          eyebrow="Integrations"
-          title="Plug it in where your docs already break"
-          lede={<>One npm package, five ways in, and two ways to host it. Everything runs against your own FalkorDB.</>}
-        />
+        <SectionHead eyebrow="Install" title="Six ways in, one npm package" lede="Pick the one that matches where your docs break." />
         <div className="tabs" role="tablist" aria-label="Integrations">
           {INTEGRATIONS.map((t) => (
             <button
@@ -629,9 +557,8 @@ function Integrations() {
             <div className="tabpanel-copy">
               <h3>{t.title}</h3>
               <p>{t.body}</p>
-              {t.note && <p className="note-status">{t.note}</p>}
               <a className="btn btn-ghost btn-sm" href={t.doc}>
-                Read the {t.label} guide <Icon name="arrow" size={14} />
+                {t.label} guide <Icon name="arrow" size={14} />
               </a>
             </div>
             <CodeBlock lang={t.lang} title={t.file ?? t.lang} code={t.code} />
@@ -644,24 +571,22 @@ function Integrations() {
 
 function Compare() {
   const rows: [string, string, string, string][] = [
-    ['Finds docs that reach the change through other functions', 'No — only the names you search for', 'No — similarity, not reachability', 'Yes — up to 3 call hops, in any repository'],
-    ['Proves a change broke an example', 'No', 'No', 'Yes — runs it before and after'],
-    ['Proves a change touches no docs', 'No — no match is not proof', 'No', 'Yes — clearance over the graph'],
+    ['Finds docs that reach the change through other functions', 'Only the names you search for', 'Similar text, not reachability', 'Up to 3 call hops, any repository'],
+    ['Proves a change broke an example', 'No', 'No', 'Runs it before and after'],
     ['Says why a paragraph is flagged', 'The matching line', 'A similarity score', 'The evidence path'],
-    ['Remembers what maintainers decided', 'No', 'No', 'Yes — decisions and verdicts on the graph'],
-    ['Noise on FalkorDB’s 4 checked PRs', '227 unrelated matches', '—', 'Only sections the change reaches'],
+    ['Noise on 4 checked pull requests', '227 unrelated matches', '—', 'Only sections the change reaches'],
   ];
   return (
-    <section className="band alt" id="compare">
+    <section className="band" id="compare">
       <div className="wrap">
-        <SectionHead eyebrow="Compared" title="Why not grep, or a vector store?" lede="Both find text. The question here is reachability, and whether the example still runs." />
+        <SectionHead eyebrow="Compared" title="Why not grep, or a vector store?" />
         <div className="table-wrap">
           <table className="compare">
             <thead>
               <tr>
                 <th scope="col" />
                 <th scope="col">grep / code search</th>
-                <th scope="col">Vector search over docs</th>
+                <th scope="col">Vector search</th>
                 <th scope="col" className="us">
                   {PRODUCT}
                 </th>
@@ -684,81 +609,30 @@ function Compare() {
   );
 }
 
-function ForLlms() {
-  const items: [string, string, ReactNode, string][] = [
-    ['doc', '/llms.txt', <>A one-page map of the docs in the llms.txt format, with quick facts for assistants.</>, '/llms.txt'],
-    ['book', '/llms-full.txt', <>Every docs page in one plain-text file, ready to paste into a context window.</>, '/llms-full.txt'],
-    ['terminal', '/docs/<page>.md', <>Each docs page as raw Markdown. Every page also has a "Copy as Markdown" button.</>, '/docs/getting-started.md'],
-    ['bot', 'MCP tool descriptions', <>Each tool tells the model what it does and the Cypher it runs; each result lists the queries it ran.</>, '#/docs/tools'],
-  ];
-  return (
-    <section className="band" id="for-llms">
-      <div className="wrap">
-        <SectionHead
-          eyebrow="Docs for people and for models"
-          title="Your assistant can read all of this"
-          lede="The documentation is published as Markdown next to the site, so an LLM gets the same facts you do — without scraping a JavaScript app."
-        />
-        <div className="grid4">
-          {items.map(([icon, title, body, href]) => (
-            <a key={title} className="card llm-card" href={href}>
-              <span className="card-icon">
-                <Icon name={icon} />
-              </span>
-              <h3>
-                <code>{title}</code>
-              </h3>
-              <p>{body}</p>
-            </a>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 export const FAQ: [string, ReactNode][] = [
   [
+    'Do I need an LLM API key?',
+    <>No. Graph mode runs impact, clearance, ranking and example runs with no model. Agent mode adds a model that reads each section and writes the verdicts and edits; it needs <code>ANTHROPIC_API_KEY</code> or any Anthropic-compatible endpoint.</>,
+  ],
+  [
     'Which languages does it understand?',
-    <>
-      Code: Python, TypeScript and JavaScript (tree-sitter), across repositories. Docs: Markdown, MDX and reStructuredText (Sphinx), in any repository. Python
-      examples are run before and after a pull request; JavaScript and TypeScript examples are linked and checked statically, not run.
-    </>,
+    <>Code: Python, TypeScript, JavaScript and Go, across repositories. Docs: Markdown, MDX and reStructuredText. Python examples are run before and after a pull request; JavaScript and TypeScript examples are checked statically.</>,
   ],
   [
     'Do I need a pull request?',
-    <>
-      No. <a href="#/audit">Audit</a> any public repository to see which examples no longer fit the code today, <code>npx -y staleproof check</code> with no
-      pull request checks your working tree before you push, and <code>docs-for</code> lists the docs that depend on a function before you change it.
-    </>,
-  ],
-  [
-    'Do I need an LLM API key?',
-    <>No. Graph mode runs impact, clearance, PageRank ranking and up to three example runs with no model. Agent mode adds a model that reads each section and writes the verdicts and edits; it needs <code>ANTHROPIC_API_KEY</code>.</>,
-  ],
-  [
-    'Which models does agent mode support?',
-    <>Claude by default (<code>claude-sonnet-5-5</code>), or any Anthropic-compatible API through <code>ANTHROPIC_BASE_URL</code>. The live demo runs <code>deepseek-v4-pro</code> through DeepSeek's Anthropic-compatible endpoint.</>,
-  ],
-  [
-    'Will it open pull requests on its own?',
-    <>No. It proposes edits; <code>patch</code> prints a <code>git apply</code>-able diff, and <code>patch --open-pr</code> opens it in your fork only when you ask (<code>--upstream</code> targets the original repository).</>,
-  ],
-  [
-    'Is running docs examples safe?',
-    <>Each example runs with no inherited secrets, a temporary HOME and a timeout, and its outbound connections are refused except a disposable scratch FalkorDB. The install step that builds the repositories at the PR's commits gets only an allow-listed environment, so PR build code never sees your credentials. It is a guard, not a security boundary: for untrusted code, run it in a container.</>,
+    <>No. <a href="#/audit">Audit</a> any public repository to see which examples no longer fit the code today, run <code>lint</code> in a pre-commit hook, or ask over MCP which docs depend on a function before you change it.</>,
   ],
   [
     'Does my code leave my machine?',
-    <>With the CLI or the GitHub Action, indexing, the graph and example runs stay wherever you run them, and private repositories work with a token. In agent mode, tool results (doc text, signatures, run output) go to the model provider you configure; graph mode sends nothing to a model. The hosted site and MCP server index public repositories only.</>,
+    <>With the CLI, the Action or the editor extension, indexing, the graph and example runs stay where you run them; private repositories work with a token. Graph mode sends nothing to a model. The hosted site and MCP server index public repositories only.</>,
+  ],
+  [
+    'Will it open pull requests on its own?',
+    <>No. It proposes edits as suggestions, a <code>git apply</code>-able patch, or one fix PR you opt into. Nothing is pushed without you.</>,
   ],
   [
     'What does it cost?',
-    <>Nothing: it is MIT licensed. You run FalkorDB (locally, in Docker, or on FalkorDB Cloud's free tier) and pay your model provider in agent mode.</>,
-  ],
-  [
-    'Why does it need a graph database?',
-    <>Impact is a variable-length path across repositories, clearance is the same pattern negated, decisions govern code transitively, and ranking is PageRank. Take FalkorDB out and it is a grep over one repository.</>,
+    <>Nothing: it is MIT licensed. You run FalkorDB (locally, in Docker, or on FalkorDB Cloud's free tier) and pay your model provider only in agent mode.</>,
   ],
 ];
 
@@ -788,15 +662,12 @@ function FinalCta() {
     <section className="band cta-band">
       <div className="wrap cta-inner">
         <h2>Check your next pull request before your readers do.</h2>
-        <p>Add the workflow once; every pull request after that gets its docs impact, with proof.</p>
+        <p>Install once. Every pull request after that gets its docs impact, with proof.</p>
         <div className="cta-row center">
-          <a className="btn btn-primary" href="#/install">
-            <Icon name="github" /> Install in one click
+          <a className="btn btn-primary btn-lg" href="#/install">
+            <Icon name="github" /> Add to GitHub
           </a>
-          <a className="btn btn-ghost" href="#/try">
-            <Icon name="play" /> Check a pull request
-          </a>
-          <a className="btn btn-ghost" href={REPO_URL} target="_blank" rel="noreferrer">
+          <a className="btn btn-ghost btn-lg" href={REPO_URL} target="_blank" rel="noreferrer">
             <Icon name="github" /> Star on GitHub
           </a>
         </div>
