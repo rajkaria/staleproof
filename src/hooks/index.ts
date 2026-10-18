@@ -6,6 +6,7 @@ import { ParseCache } from '../lint/cache.js';
 import { lintTargets } from '../lint/files.js';
 import { addFixes } from '../lint/fixes.js';
 import { gitRoot, refTree, worktreeTree } from '../lint/sources.js';
+import { exampleKindCounts } from '../lint/maturity.js';
 import type { Finding } from '../lint/types.js';
 import { lintAgainstHead, pruneRecords, type DiffLint } from './diff-lint.js';
 import { predictedFromLocalGraph } from './graph.js';
@@ -29,6 +30,8 @@ export interface HookOptions {
   timeoutMs?: number;
   /** Look for predicted breaks in a local graph (stop). Default true. */
   graph?: boolean;
+  /** The predicted breaks to use instead of asking a local graph (tests). */
+  predicted?: PredictedBreak[];
 }
 
 /** What the hook prints (JSON for the agent, or nothing). The exit status is always 0. */
@@ -244,14 +247,16 @@ async function stop(input: HookInput, env: NodeJS.ProcessEnv, opts: HookOptions)
   if (state.start !== undefined && !state.edited) return '';
   const before = new Set(state.start ?? []);
   const errors = d.fresh.filter((f) => f.severity === 'error' && !before.has(f.fingerprint));
-  const predicted: PredictedBreak[] = opts.graph === false ? [] : await predictedFromLocalGraph(d.root);
+  const predicted: PredictedBreak[] = opts.predicted ?? (opts.graph === false ? [] : await predictedFromLocalGraph(d.root));
   const examplesFound = new Set(errors.map((f) => `${f.path}:${f.line}`));
   const extra = predicted.filter((p) => !examplesFound.has(`${p.example}:${p.line}`));
+  // A beta kind (src/lint/maturity.ts) is listed, but blocks only when the repository's [rules] opts it in.
+  const blocking = extra.filter((p) => !p.kind || exampleKindCounts(p.kind, d.config.rules));
   // Docs naming a symbol whose signature the session changed: listed with the errors, never a reason to block alone.
   const mentions = state.files?.length ? await mentionsFor(d, state.files, await codeView(d)) : [];
   if (!errors.length && !extra.length && !mentions.length) return '';
   const list = itemList(await withFixes(d, errors, Date.now() + 20_000, true), mentions, extra);
-  const count = errors.length + extra.length;
+  const count = errors.length + blocking.length;
   const summary = count
     ? `Staleproof: ${count} doc reference${count === 1 ? '' : 's'} this session made wrong (new since HEAD):`
     : 'Staleproof: docs that name code this session changed (check they still hold):';

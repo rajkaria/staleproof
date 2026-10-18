@@ -1,0 +1,57 @@
+{
+  "summary": "no finding link-broken at docs/acknowledgements.md:49, docs/acknowledgements.md:71, docs/acknowledgements.md:73, docs/acknowledgements.md:77, docs/acknowledgements.md:98",
+  "source": {
+    "repo": "vitejs/vite",
+    "sha": "df7503cc499e0b49e45701e3be7546918ee9d322",
+    "urls": [
+      "https://github.com/vitejs/vite/blob/df7503cc499e0b49e45701e3be7546918ee9d322/docs/acknowledgements.md#L49",
+      "https://github.com/vitejs/vite/blob/df7503cc499e0b49e45701e3be7546918ee9d322/docs/acknowledgements.md#L71",
+      "https://github.com/vitejs/vite/blob/df7503cc499e0b49e45701e3be7546918ee9d322/docs/acknowledgements.md#L73",
+      "https://github.com/vitejs/vite/blob/df7503cc499e0b49e45701e3be7546918ee9d322/docs/acknowledgements.md#L77",
+      "https://github.com/vitejs/vite/blob/df7503cc499e0b49e45701e3be7546918ee9d322/docs/acknowledgements.md#L98"
+    ]
+  },
+  "why": "The page is a VitePress page with Vue markup: <a v-if=\"dep.funding\" :href=\"dep.funding\">. :href is a Vue binding whose value is a JavaScript expression (dep.funding), not a link target.",
+  "absent": [
+    {
+      "rule": "link-broken",
+      "file": "docs/acknowledgements.md",
+      "line": 49,
+      "message": "The link target `docs/dep.funding` does not exist."
+    },
+    {
+      "rule": "link-broken",
+      "file": "docs/acknowledgements.md",
+      "line": 71,
+      "message": "The link target `docs/author.url` does not exist."
+    },
+    {
+      "rule": "link-broken",
+      "file": "docs/acknowledgements.md",
+      "line": 73,
+      "message": "The link target `docs/author.funding` does not exist."
+    },
+    {
+      "rule": "link-broken",
+      "file": "docs/acknowledgements.md",
+      "line": 77,
+      "message": "The link target `docs/pkg.funding` does not exist."
+    },
+    {
+      "rule": "link-broken",
+      "file": "docs/acknowledgements.md",
+      "line": 98,
+      "message": "The link target `docs/dep.funding` does not exist."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "docs/.vitepress/config.ts",
+    "docs/acknowledgements.md",
+    "docs/package.json",
+    "package.json",
+    "pnpm-workspace.yaml"
+  ],
+  "builtWith": "0.7.0"
+}

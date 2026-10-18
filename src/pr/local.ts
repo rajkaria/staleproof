@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import { structuredPatch } from 'diff';
 import { z } from 'zod';
 import * as Q from '../graph/queries.js';
+import { ruleSettingsOf } from '../graph/rule-settings.js';
+import { exampleKindCounts } from '../lint/maturity.js';
 import type { OrgGraph } from '../graph/client.js';
 import { git, parseRepoName } from '../indexer/repo.js';
 import { symbolId } from '../indexer/resolve.js';
@@ -234,13 +236,18 @@ export async function analyzeChanges(
     mismatched,
   };
   const changedCount = changes.filter((c) => c.kind !== 'added').length;
-  const examples = new Set(predicted.map((p) => p.example)).size;
+  // Only trusted predictions count, as in the PR report; beta ones are named apart (src/lint/maturity.ts).
+  const ruleSettings = predicted.length ? await ruleSettingsOf(graph, [...new Set(predicted.map((p) => p.repo))]) : new Map();
+  const trusted = predicted.filter((p) => exampleKindCounts(p.kind, ruleSettings.get(p.repo)));
+  const examples = new Set(trusted.map((p) => p.example)).size;
+  const beta = new Set(predicted.map((p) => p.example)).size - examples;
   const summary =
     diff.symbols.length === 0
       ? `These changes touch no Python, TypeScript or JavaScript symbol in ${canonical}; no docs can be falsified through the code.`
       : `${changedCount} changed symbol${changedCount === 1 ? '' : 's'} reach${changedCount === 1 ? 'es' : ''} ${sections.length} doc section${sections.length === 1 ? '' : 's'} ` +
         `(${counts.breaking} breaking, ${counts.api} signature, ${counts.behavior} behavior; ${sections.filter((s) => s.crossRepo).length} in other repositories).` +
         (examples ? ` ${examples} example${examples === 1 ? ' is' : 's are'} predicted to break, the call no longer fitting the changed code.` : '') +
+        (beta ? ` ${beta} more ${beta === 1 ? 'is' : 'are'} predicted by beta checks (lower confidence).` : '') +
         (cleared.length ? ` ${cleared.length} changed symbol${cleared.length === 1 ? '' : 's'} reach${cleared.length === 1 ? 'es' : ''} no doc.` : '');
   return { data: { impact, cleared }, summary, tracer };
 }

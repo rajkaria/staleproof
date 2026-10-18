@@ -1,0 +1,30 @@
+{
+  "summary": "no finding path-missing at src/prefect/server/AGENTS.md:31",
+  "source": {
+    "repo": "PrefectHQ/prefect",
+    "sha": "87b5243845e733ed938b21cf7b9aeda6d6a4e194",
+    "urls": [
+      "https://github.com/PrefectHQ/prefect/blob/87b5243845e733ed938b21cf7b9aeda6d6a4e194/src/prefect/server/AGENTS.md#L31"
+    ]
+  },
+  "why": "`models/__init__` names the module src/prefect/server/models/__init__.py next to this AGENTS.md, written without its extension. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "path-missing",
+      "file": "src/prefect/server/AGENTS.md",
+      "line": 31,
+      "message": "`models/__init__` does not exist in the repository."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "docs/docs.json",
+    "justfile",
+    "pyproject.toml",
+    "src/prefect/server/AGENTS.md",
+    "src/prefect/server/models/__init__.py",
+    "src/prefect/server/models/events.py"
+  ],
+  "builtWith": "0.7.0"
+}

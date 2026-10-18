@@ -68,7 +68,8 @@ describe('before a pull request (FalkorDB)', () => {
     expect(r.data.impact.predicted.map((p) => `${p.example.split(':').slice(1).join(':')} ${p.kind}: ${p.detail}`)).toEqual([
       'docs/getting-started.mdx:0 missing-argument: `Graph.query` requires `timeout`, which the example does not pass',
     ]);
-    expect(r.summary).toMatch(/^1 changed symbol reaches \d+ doc sections? .*1 example is predicted to break/);
+    // missing-argument is a beta check (src/lint/maturity.ts): named apart, not counted as a predicted break.
+    expect(r.summary).toMatch(/^1 changed symbol reaches \d+ doc sections? .*1 more is predicted by beta checks \(lower confidence\)/);
     const prs = await graph.run<{ n: number }>(`MATCH (p:PullRequest) RETURN count(p) AS n`);
     expect(prs.rows[0]!.n).toBe(0);
     await expect(checkChangesTool.run(ctx, {})).rejects.toThrow('this server cannot read your disk');

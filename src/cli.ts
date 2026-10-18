@@ -40,7 +40,10 @@ import { checkMarkdown } from './format/markdown.js';
 import { lintRepo } from './lint/engine.js';
 import { cacheEnabled, ParseCache } from './lint/cache.js';
 import { lintNew, lintStaged } from './lint/diff.js';
-import { formatGithub, formatLint, lintExitCode, lintSummaryLine, LINT_FORMATS, type LintFormat } from './lint/format.js';
+import { ruleSettingsOf } from './graph/rule-settings.js';
+import { loadRepoConfig } from './indexer/repo-config.js';
+import { exampleKindCounts } from './lint/maturity.js';
+import { formatGithub, formatLint, lineReader, lintExitCode, lintSummaryLine, LINT_FORMATS, type LintFormat } from './lint/format.js';
 import { isRuleId } from './lint/rules.js';
 import type { RuleId } from './lint/types.js';
 
@@ -280,16 +283,22 @@ async function checkLocal(opts: { dir?: string; base?: string; repo?: string; js
     // Docs references the working tree makes wrong (lint at the base and on disk).
     const newFindings = await worktreeFindings(local).catch((err: Error) => void log(`docs references not checked: ${err.message}`));
     if (newFindings) r.data.newFindings = newFindings;
+    // A beta example check's prediction (src/lint/maturity.ts) never fails --fail-on-predicted unless the docs'
+    // repository opts its rule in: the indexed `[rules]` of each, this checkout's own from the working tree.
+    const ruleSettings = await ruleSettingsOf(graph, [...new Set(r.data.impact.predicted.map((p) => p.repo))]);
+    const own = await loadRepoConfig(local.root).catch(() => undefined);
+    if (own?.rules) ruleSettings.set(local.repo, own.rules);
+    const counted = r.data.impact.predicted.filter((p) => exampleKindCounts(p.kind, ruleSettings.get(p.repo)));
     if (opts.json) console.log(JSON.stringify({ summary: r.summary, ...r.data }, null, 2));
     else if (opts.format === 'markdown') {
-      const md = checkMarkdown({ impact: r.data.impact, summary: r.summary, cleared: r.data.cleared, org, ...(newFindings ? { newFindings } : {}) });
+      const md = checkMarkdown({ impact: r.data.impact, summary: r.summary, cleared: r.data.cleared, org, ruleSettings, ...(newFindings ? { newFindings } : {}) });
       if (opts.out) await writeFile(opts.out, `${md}\n`);
       else console.log(md);
     } else {
       const clear = allClearText(r.data.impact, r.data.cleared, newFindings || undefined);
       if (clear) {
         console.log(`${clear}\n${dim('Static check of the working tree: nothing was run or written to the graph.')}`);
-        if (opts.failOnPredicted && r.data.impact.predicted.length) process.exitCode = 1;
+        if (opts.failOnPredicted && counted.length) process.exitCode = 1;
         return;
       }
       if (newFindings) console.log(`${newFindingsText(newFindings, 'these changes')}\n`);
@@ -298,7 +307,7 @@ async function checkLocal(opts: { dir?: string; base?: string; repo?: string; js
       console.log(clearanceText(r.data.cleared));
       console.log(dim(`\n${r.summary}\nStatic check of the working tree: nothing was run or written to the graph. Push and open a pull request to run the examples before and after.`));
     }
-    if (opts.failOnPredicted && r.data.impact.predicted.length) process.exitCode = 1;
+    if (opts.failOnPredicted && counted.length) process.exitCode = 1;
   });
 }
 
@@ -507,7 +516,8 @@ program
         r = { ...r, findings: (await addFixes(r, worktreeTree(dir, r.repo), { lint: lintOpts, cache: lintOpts.cache ?? false })).findings };
       }
       if (diff) log(`new findings only: ${diff.head.label} against ${diff.base.label} (${diff.base.why}); ${diff.fixed} fixed`);
-      const body = formatLint(r, opts.format as LintFormat);
+      // The flagged line goes into the false-positive links; --staged lints the index, not the disk, so not there.
+      const body = formatLint(r, opts.format as LintFormat, opts.staged ? {} : { lineText: lineReader(dir) });
       if (opts.out) {
         await writeFile(opts.out, `${body}\n`);
         log(`wrote ${opts.out}: ${lintSummaryLine(r)}`);

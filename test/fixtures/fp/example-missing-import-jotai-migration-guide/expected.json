@@ -1,0 +1,30 @@
+{
+  "summary": "no finding example-missing-import at docs/guides/migrating-to-v3.mdx:76",
+  "source": {
+    "repo": "pmndrs/jotai",
+    "sha": "cf02a7f81cd9b0cf7d10a7c625046631001c9c8f",
+    "urls": [
+      "https://github.com/pmndrs/jotai/blob/cf02a7f81cd9b0cf7d10a7c625046631001c9c8f/docs/guides/migrating-to-v3.mdx#L76"
+    ]
+  },
+  "why": "The block is under '#### Previous API (v2)' in the v3 migration guide: it shows the import that v3 removed, on purpose, right above '#### New API (v3)'. (src/utils.ts and the two modules it re-exports with export * are kept so jotai/utils's names are all known.) Fixed on Oct 18 (src/indexer/repo.ts: migration and upgrade guides are pages of an earlier API, never judged against today's code).",
+  "absent": [
+    {
+      "rule": "example-missing-import",
+      "file": "docs/guides/migrating-to-v3.mdx",
+      "line": 76,
+      "message": "`jotai/utils` has no `atomFamily`."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "docs/guides/migrating-to-v3.mdx",
+    "package.json",
+    "pnpm-workspace.yaml",
+    "src/react/utils.ts",
+    "src/utils.ts",
+    "src/vanilla/utils.ts"
+  ],
+  "builtWith": "0.6.1"
+}

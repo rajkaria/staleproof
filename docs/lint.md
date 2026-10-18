@@ -14,17 +14,22 @@ npx staleproof lint
 AI agent instructions
 
   AGENTS.md
-    4:21  error    `src/settings.ts` does not exist in the repository.  [path-missing]
-    5:26  error    `src/util/old.ts` does not exist; it moved to `src/helpers/old.ts`.  [path-missing]
-    6:29  warning  `src/app.ts` has 4 lines; line 999 does not exist.  [line-out-of-range]
+    7:85  error    The link target `docs/old-guide.md` does not exist.  [link-broken]
 
-Docs
+Lower confidence (beta rules)
+  Shown for review: these rules are still earning trust, so their findings never fail a check or lower the score. Opt a rule in with `[rules] "<id>" = "warning"` in .staleproof.toml.
 
+  AGENTS.md
+    4:21  info     `src/settings.ts` does not exist in the repository.  [path-missing]
+    5:26  info     `src/util/old.ts` does not exist; it moved to `src/helpers/old.ts`.  [path-missing]
+    6:29  info     `src/app.ts` has 4 lines; line 999 does not exist.  [line-out-of-range]
   docs/guide.md
-    5:52  warning  This page has no heading `#configuration`.  [anchor-missing]
-    7:70  error    `lib/removed.ts` does not exist; it was deleted in 3f2a9c1.  [path-missing]
+    5:52  info     This page has no heading `#configuration`.  [anchor-missing]
+    7:70  info     `lib/removed.ts` does not exist; it was deleted in 3f2a9c1.  [path-missing]
+    9:56  info     `docs/setup.md` has no heading `#legacy-usage`.  [anchor-missing]
 
-4 errors, 2 warnings in 2 files (6 files checked, 111 ms).
+False positive? Report it in one click: https://github.com/rajkaria/staleproof/issues/new?template=false-positive.yml (the rule, file:line and message are enough).
+1 error, 6 info in 2 files (9 files checked, 111 ms); 6 of them lower confidence.
 ```
 
 ## What it reads
@@ -61,11 +66,14 @@ vendored folders are not checked. Add files with `[lint] include`, more agent fi
 
 The [rules reference](rules.md) lists every rule with an example.
 
+Beta rules (the **Maturity** column of the [rules reference](rules.md)) report at info under "Lower confidence (beta rules)" and never fail `--fail-on` or lower the audit score; `[rules] "<id>" = "warning"` opts one in. A wrong finding? The report ends with a link to report it: see [False positives](false-positives.md).
+
 ## Precision first
 
-A finding you have to dismiss costs more than one Staleproof misses, so every rule judges only what it can prove:
+A finding you have to dismiss costs more than one Staleproof misses, so every rule tries to judge only what it can prove:
 
-- **Agent instruction files describe this repository**, so a path they name that does not exist is reported.
+- **Agent instruction files describe this repository**, so a path they name that does not exist is reported (at
+  info, lower confidence: `path-missing` is a beta rule for now).
   Ordinary docs often describe a reader's project or another repository (`create src/app.py`, Flask's
   `docs/views.rst`), so there a missing path is reported only when git history shows this repository had it: it was
   deleted or renamed. The message says which, and where it went.
@@ -79,9 +87,11 @@ A finding you have to dismiss costs more than one Staleproof misses, so every ru
   the docs site (`CONTRIBUTING.md`) may link relative to the docs folder.
 - Git history is read with one `git log` that never fetches file contents, so partial clones stay fast.
 
-Measured on eight public repositories (openai/codex, vercel/ai, pydantic-ai, the MCP Python SDK, TypeScript, httpx,
-Flask, falkordb-py): every reported finding was real drift, such as headings renamed under deep links, test files
-moved under paths that `AGENTS.md` still names, or links to source files that a port renamed.
+On eight public repositories (openai/codex, vercel/ai, pydantic-ai, the MCP Python SDK, TypeScript, httpx, Flask,
+falkordb-py) it found real drift, such as headings renamed under deep links, test files moved under paths that
+`AGENTS.md` still names, or links to source files that a port renamed. On repositories it was never tuned on it
+still makes mistakes: the rules that make them most often are beta (above), and every false positive reported
+becomes a fixture that each release runs ([False positives](false-positives.md)).
 
 ## Commands and the repository's own CLI
 

@@ -40,6 +40,8 @@ async function appWithPr(): Promise<{ dir: string; base: string; head: string }>
     'README.md': '# App\n\n## Setup\n\nRead [setup](docs/setup.md). The [old notes](docs/gone.md) are gone.\n\n## Checks\n\n```bash\nnpm run lint:docs\n```\n',
     'docs/setup.md': '# Setup\n\n## Install\n\nRun it.\n',
     'app/main.py': 'def run(x):\n    """Run it."""\n    return x\n',
+    // path-missing is beta (src/lint/maturity.ts): opted in, so the counts below are errors.
+    '.staleproof.toml': '[rules]\n"path-missing" = "error"\n',
     'package.json': JSON.stringify({ name: 'app', private: true, scripts: { 'lint:docs': 'staleproof lint', test: 'vitest' } }, null, 2),
   });
   gitIn(dir, 'init', '-q', '-b', 'main');
@@ -118,7 +120,8 @@ describe('docs this pull request makes wrong (FalkorDB)', () => {
     expect(at).toBeGreaterThan(0);
     expect(md.slice(md.indexOf(NEW_FINDINGS_HEADING))).toContain('**AI agent instructions**');
     expect(md.indexOf('**AI agent instructions**')).toBeLessThan(md.indexOf('**README and contributing guides**'));
-    expect(md).toContain(`- [\`AGENTS.md:5\`](https://github.com/acme/app/blob/${app.head}/AGENTS.md#L5) \`lint:docs\` is not a script in package.json. <sub>command-missing</sub>`);
+    expect(md).toContain(`- [\`AGENTS.md:5\`](https://github.com/acme/app/blob/${app.head}/AGENTS.md#L5) \`lint:docs\` is not a script in package.json. <sub>command-missing · [False positive?](https://github.com/rajkaria/staleproof/issues/new?template=false-positive.yml&`);
+    expect(md).toContain('&rule=command-missing&repository=acme%2Fapp%40');
     expect(md).toContain('<!-- staleproof:findings new=4 errors=4 warnings=0 -->');
     expect(md).toMatch(/<!-- staleproof:counts breaks=0 predicted=0 sections=\d+ mismatched=0 -->$/);
     // Annotations: one workflow command per new finding.

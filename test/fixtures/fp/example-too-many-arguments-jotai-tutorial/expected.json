@@ -1,0 +1,35 @@
+{
+  "summary": "no finding example-too-many-arguments at docs/guides/core-internals.mdx:70, docs/guides/core-internals.mdx:76",
+  "source": {
+    "repo": "pmndrs/jotai",
+    "sha": "cf02a7f81cd9b0cf7d10a7c625046631001c9c8f",
+    "urls": [
+      "https://github.com/pmndrs/jotai/blob/cf02a7f81cd9b0cf7d10a7c625046631001c9c8f/docs/guides/core-internals.mdx#L70",
+      "https://github.com/pmndrs/jotai/blob/cf02a7f81cd9b0cf7d10a7c625046631001c9c8f/docs/guides/core-internals.mdx#L76"
+    ]
+  },
+  "why": "The guide builds a simplified atom() in steps: the first block defines atom = (initialValue) => ..., the block at line 67 shows the next version's two-argument usage, and the block at line 98 defines atom = (read, write). The calls at lines 70 and 76 were judged against the first definition, which the page replaces; they match jotai's real atom(read, write) too.",
+  "absent": [
+    {
+      "rule": "example-too-many-arguments",
+      "file": "docs/guides/core-internals.mdx",
+      "line": 70,
+      "message": "`atom` takes at most 1 argument; the example passes 2."
+    },
+    {
+      "rule": "example-too-many-arguments",
+      "file": "docs/guides/core-internals.mdx",
+      "line": 76,
+      "message": "`atom` takes at most 1 argument; the example passes 2."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "docs/guides/core-internals.mdx",
+    "package.json",
+    "pnpm-workspace.yaml",
+    "src/vanilla/utils/unwrap.ts"
+  ],
+  "builtWith": "0.6.1"
+}

@@ -1,0 +1,323 @@
+[project]
+name = "logfire-python"
+version = "0.0.0"
+requires-python = ">=3.10"
+dependencies = ["logfire-sdk"]
+
+[dependency-groups]
+editor-tests = [
+    "jedi>=0.19.2",
+    "mypy>=1.10.0",
+    "pyright!=1.1.407",
+]
+dev = [
+    { include-group = "editor-tests" },
+    "httpx >= 0.27.2",
+    "httpx2 >= 2.0.0",
+    "aiohttp >= 3.10.9",
+    "redis >= 5.1.1",
+    "pymongo >= 4.10.1",
+    "elasticsearch >= 8.15",
+    "fastapi != 0.124.3, != 0.124.4",
+    "Flask >= 3.0.3",
+    "django >= 4.2.16",
+    "dirty-equals >= 0.8.0",
+    "pytest >= 8.3.4",
+    "pytest-django >= 4.6.0",
+    "pytest-pretty >= 1.2.0",
+    "pydantic >= 2.11.0",
+    "requests >= 2.31.0",
+    "packaging",
+    # requests >= 2.34 bundles inline (py.typed) annotations shaped differently from
+    # the types-requests stubs the code was written against. Concretely, it types
+    # Session.headers as CaseInsensitiveDict[str], which rejects the str|bytes header
+    # values requests accepts at runtime and that our DiskRetryer passes to a Session
+    # (exporters/otlp.py); types-requests types it as MutableMapping[str, str|bytes].
+    # Keep depending on types-requests so its stubs take priority; it previously came
+    # in transitively via openai-agents.
+    "types-requests",
+    "sqlalchemy >= 1.4.54",
+    "pandas>=2.1.2",
+    "attrs >= 23.1.0",
+    "openai >= 1.108.1",
+    "opentelemetry-instrumentation-aiohttp-client>=0.42b0",
+    "opentelemetry-instrumentation-aiohttp-server>=0.55b0",
+    "opentelemetry-instrumentation-asgi>=0.42b0",
+    "opentelemetry-instrumentation-wsgi>=0.42b0",
+    "opentelemetry-instrumentation-fastapi>=0.42b0",
+    "opentelemetry-instrumentation-starlette>=0.42b0",
+    "litestar>=2.11.0",
+    "opentelemetry-instrumentation-flask>=0.42b0",
+    "opentelemetry-instrumentation-django>=0.42b0",
+    "opentelemetry-instrumentation-httpx>=0.42b0",
+    "opentelemetry-instrumentation-requests>=0.42b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.42b0",
+    "opentelemetry-instrumentation-system-metrics>=0.42b0",
+    "opentelemetry-instrumentation-asyncpg>=0.42b0",
+    "opentelemetry-instrumentation-psycopg>=0.42b0",
+    "opentelemetry-instrumentation-psycopg2>=0.42b0",
+    "opentelemetry-instrumentation-redis>=0.42b0",
+    "opentelemetry-instrumentation-pymongo>=0.42b0",
+    "opentelemetry-instrumentation-celery>=0.42b0",
+    "opentelemetry-instrumentation-mysql>=0.42b0",
+    "opentelemetry-instrumentation-sqlite3>=0.42b0",
+    "opentelemetry-instrumentation-aws-lambda>=0.42b0",
+    "eval-type-backport >= 0.2.0",
+    "requests-mock >= 1.12.1",
+    "inline-snapshot >= 0.32.5",
+    "structlog >= 24.4.0",
+    "loguru >= 0.7.3",
+    "ruff >= 0.8.3",
+    "pre-commit>=3.5.0",
+    "coverage[toml]>=7.13.0",
+    "psycopg[binary] >= 3.2.3",
+    "psycopg2-binary >= 2.9.10",
+    "asyncpg >= 0.30.0",
+    "pymysql >= 1.1.1",
+    # >=48.0.1 ships a non-vulnerable OpenSSL (GHSA-537c-gmf6-5ccf).
+    "cryptography >= 48.0.1",
+    "cloudpickle>=3.0.0",
+    "anthropic>=0.27.0",
+    "sqlmodel>=0.0.15",
+    "celery>=5.4.0",
+    "faststream[redis]>=0.5.0",
+    # https://github.com/testcontainers/testcontainers-python/issues/874
+    "testcontainers<4.13",
+    "mysql-connector-python>=8.0",
+    "pyarrow>=17.0.0; python_version < '3.13'",
+    "pyarrow>=18.1.0; python_version >= '3.13'",
+    # pyarrow 25.0.0 dropped its py.typed marker and type stubs; pyarrow-stubs restores pyright typing.
+    "pyarrow-stubs>=20",
+    # It looks like numpy didn't use to have `requires-python`, so we need to specify the version.
+    "numpy>=2.0; python_version < '3.12'",
+    # Backport of `compression.zstd`, to test zstd export compression below Python 3.14.
+    "backports.zstd>=1.7.0; python_version < '3.14'",
+    "pytest-recording>=0.13.2",
+    # >=8.2.1 includes the aiohttp 3.14 compatibility fix and a fix for arbitrary
+    # code execution via unsafe YAML deserialization of cassettes (GHSA-rpj2-4hq8-938g).
+    "vcrpy>=8.2.1",
+    "uvicorn>=0.30.6",
+    "logfire-api",
+    "setuptools>=75.3.0",
+    # https://github.com/omnilib/aiosqlite/issues/369
+    "aiosqlite!=0.22.*",
+    "boto3 >= 1.28.57",
+    "botocore >= 1.31.57",
+    "greenlet >= 3.1.1",
+    "pytest-xdist>=3.6.1",
+    "openai-agents[voice]>=0.14.0",
+    "fastmcp-slim[server]>=4",
+    "pydantic-ai-slim[mcp]>=2",
+    "pydantic-evals>=2",
+    "pydantic-monty>=0.0.23",
+    # >=1.3.9 fixes path traversal / sandbox escape in file-search middleware and loaders (GHSA-gr75-jv2w-4656).
+    "langchain>=1.3.9",
+    "langchain-openai>=0.3.17",
+    "langgraph >= 0",
+    "opentelemetry-instrumentation-google-genai >= 1.0b0",
+    "google-genai >= 0",
+    "openinference-instrumentation-litellm >= 0",
+    "litellm >= 1.98.0; python_version >= '3.11'",
+    # LiteLLM 1.97 leaves its Message Pydantic model unresolved on Python 3.10, while
+    # 1.98 imports typing.NotRequired, which is unavailable on Python 3.10.
+    "litellm >= 1.96.2, != 1.97.0, != 1.98.0; python_version < '3.11'",
+    "openinference-instrumentation-dspy >= 0",
+    "dspy >= 3.1.0",
+    "pip >= 0",
+    "surrealdb >= 0",
+    "snowflake-connector-python >= 3",
+    "pytest-examples>=0.0.18",
+    "pytest-timeout>=2.4.0",
+    "pytest-asyncio>=0.24.0",
+    "pydantic-handlebars>=0.2.1",
+    "claude-agent-sdk>=0",
+]
+[tool.inline-snapshot]
+default-flags = ["disable"]
+format-command = "ruff format --stdin-filename {filename}"
+
+[tool.uv.sources]
+logfire-api = { workspace = true }
+logfire-sdk = { workspace = true }
+
+[tool.uv]
+package = false
+default-groups = ["dev"]
+exclude-newer = "4 days"
+
+[tool.uv.exclude-newer-package]
+# These are our own packages, not worth defending from supply chain attacks on them.
+pydantic_ai_slim = false
+pydantic-graph = false
+pydantic-evals = false
+pydantic = false
+pydantic-core = false
+pydantic-handlebars = false
+genai-prices = false
+logfire-cli = false
+
+[tool.uv.workspace]
+members = ["logfire", "logfire-api", "logfire-sdk"]
+
+# https://beta.ruff.rs/docs/configuration/
+[tool.ruff]
+line-length = 120
+src = [".", "logfire-sdk"]
+extend-exclude = ["logfire-api/logfire_api/*", "tests/auto_trace_samples/param_spec.py"]
+
+[tool.ruff.lint]
+# Ruff 0.16 greatly expanded the default rule set (59 -> 413 rules).
+# Restore the pre-0.16 defaults until we deliberately migrate to the new defaults.
+select = ["E4", "E7", "E9", "F"]
+extend-select = [
+    "Q", # https://docs.astral.sh/ruff/rules/#flake8-quotes-q
+    "RUF100", # https://docs.astral.sh/ruff/rules/unused-noqa/
+    "C90", # https://docs.astral.sh/ruff/rules/#mccabe-c90
+    "UP", # https://docs.astral.sh/ruff/rules/#pyupgrade-up
+    "I", # https://docs.astral.sh/ruff/rules/#isort-i
+    "D", # https://docs.astral.sh/ruff/rules/#pydocstyle-d
+    "DTZ005", # https://docs.astral.sh/ruff/rules/call-datetime-now-without-tzinfo/
+    "FA", # https://docs.astral.sh/ruff/rules/#flake8-future-annotations-fa
+]
+flake8-quotes = { inline-quotes = "single", multiline-quotes = "double" }
+isort = { combine-as-imports = true, known-first-party = [
+    "logfire",
+    "logfire_api",
+] }
+mccabe = { max-complexity = 14 }
+ignore = [
+    "D107", # ignore missing docstring in __init__ methods
+    "D100", # ignore missing docstring in module
+    "D104", # ignore missing docstring in public package
+    "D105", # ignore missing docstring in magic methods
+    "D418", # allow docstrings on overloads for the sake of logfire-api stubs
+    "C901", # ignore too complex functions, doesn't seem to be worth it
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D"]
+"docs/**/*.py" = ["D"]
+"logfire-api/logfire_api/**/*.py" = ["D"]
+
+[tool.ruff.format]
+docstring-code-format = true
+quote-style = "single"
+# Ruff 0.16 formats Python code blocks in Markdown files by default,
+# but that mangles the `#>` output markers checked by pytest-examples,
+# which is the authority on docs code formatting.
+exclude = ["*.md"]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+reportUnnecessaryTypeIgnoreComment = true
+reportMissingTypeStubs = false
+include = ["logfire-sdk/logfire", "tests"]
+extraPaths = ["logfire-sdk"]
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+xfail_strict = true
+pythonpath = ["."]
+markers = [
+    "otel_collector: requires Docker and runs against a pinned OpenTelemetry Collector",
+]
+# The langsmith pytest plugin messes with test_langchain.py
+addopts = "-p no:langsmith_plugin"
+filterwarnings = [
+    "error",
+    # fastapi uses deprecated pydantic functions
+    "ignore:`FieldValidationInfo` is deprecated.*:DeprecationWarning:pydantic_core:",
+    "ignore:`general_(before|after|wrap|plain)_validator_function` is deprecated.*:DeprecationWarning:fastapi:",
+    "ignore:`general_(before|after|wrap|plain)_validator_function` is deprecated.*:DeprecationWarning:pydantic_core:",
+    # google packages are using deprecated APIs
+    "ignore::DeprecationWarning:pkg_resources*:",
+    "ignore::DeprecationWarning:google*:",
+    "ignore:.* google._upb._message.*:DeprecationWarning",
+    # OTEL uses some deprecated APIs
+    "ignore:pkg_resources:DeprecationWarning:opentelemetry.instrumentation.dependencies*:",
+    # To be able to test numpy.matrix
+    "ignore:the matrix subclass is not the recommended way.*:PendingDeprecationWarning",
+    # See test_filter_warnings in test_testing.py
+    'ignore:(?s).*google/cloud/pubsub_v1/subscriber/_protocol/streaming_pull_manager.*scheduler\.shutdown.*IndexError. tuple index out of range:pytest.PytestUnhandledThreadExceptionWarning',
+    'ignore:(?s).*aiosqlite/core\.py.*get_loop\(future\).call_soon_threadsafe.*RuntimeError. Event loop is closed:pytest.PytestUnhandledThreadExceptionWarning',
+    # This problem is fixed in https://github.com/open-telemetry/opentelemetry-python-contrib/pull/2013, but not the warning.
+    "ignore:The '__version__' attribute is deprecated and will be removed in Flask 3.1:DeprecationWarning",
+    # kombu using deprecated redis API
+    "ignore:Call to 'get_connection' function with deprecated usage of input argument/s.*:DeprecationWarning",
+    # celery's redis backend uses redis's deprecated `setex` (deprecated in redis-py 8.0)
+    "ignore:Call to deprecated setex.*:DeprecationWarning",
+    # OpenTelemetry event logger stuff being used by Pydantic AI
+    "ignore:You should use `\\w*(L|l)ogger\\w*` instead. Deprecated since version 1.39.0 and will be removed in a future release.:DeprecationWarning",
+    # flask.__version__ is deprecated and used by OTel
+    "ignore:The '__version__' attribute is deprecated and will be removed in Flask 3.2.*:DeprecationWarning",
+    # aiohttp web.Application is deprecated and used by OTel
+    "ignore:Inheritance class _InstrumentedApplication from web.Application is discouraged:DeprecationWarning",
+    # anthropic SDK warns when using older models that are still recorded in test cassettes
+    "ignore:The model 'claude-.*' is deprecated.*:DeprecationWarning",
+    # py-key-value-aio (a pydantic-ai dependency) type-checks itself at import time with
+    # beartype's import hook, which is designed to warn rather than fail. Promoting those
+    # warnings to errors breaks `import pydantic_ai`, e.g. on pydantic 2.10 where
+    # `JsonSchemaValue` is still a `typing.Dict` alias, triggering beartype's PEP 585
+    # deprecation warning during decoration of py-key-value-aio's pydantic adapter.
+    "ignore::beartype.roar.BeartypeClawDecorWarning",
+    "ignore::beartype.roar.BeartypeDecorHintPep585DeprecationWarning",
+    # langsmith uses asyncio.iscoroutinefunction, deprecated on Python 3.14
+    "ignore:'asyncio.iscoroutinefunction' is deprecated.*:DeprecationWarning:langsmith.*",
+    # mcp's FastMCP Settings class has an unresolved forward reference in its `lifespan` field,
+    # which pydantic-settings >= 2.15 warns about (IncompleteFieldDefinitionWarning).
+    # No category here: naming the warning class would fail to import on jobs with older pydantic-settings.
+    "ignore:Field 'lifespan' has an incomplete definition.*",
+    # snowflake.connector.options warns about our locked pyarrow version being outside its
+    # declared bound on Python 3.14 (pyarrow<24, we have 25.0.1). Just an import-time warning.
+    "ignore:You have an incompatible version of 'pyarrow' installed.*:UserWarning:snowflake.connector.options",
+]
+DJANGO_SETTINGS_MODULE = "tests.otel_integrations.django_test_project.django_test_site.settings"
+
+# https://coverage.readthedocs.io/en/latest/config.html#run
+[tool.coverage.run]
+branch = true
+relative_files = true
+source = ["logfire-sdk/logfire", "logfire-api"]
+omit = [
+    "*/tmp/*",
+    "*/temp/*",
+    "*/.pytest_cache/*",
+    "*/pytest-of-*/*",
+]
+#
+# Subprocess coverage patching is enabled to measure coverage in child processes.
+# This is particularly useful for tests that spawn subprocesses (e.g., Pytester tests).
+#
+# Note: This previously exposed a race condition in test_sqlalchemy_async_instrumentation
+# which has been fixed by using unique temporary files per parametrized test instead of
+# hardcoded filenames.
+#
+patch = ["subprocess"]
+# Use this to get the tests that are covering the code. This is disabled by default because it can be slow.
+# dynamic_context = "test_function"
+
+# https://coverage.readthedocs.io/en/latest/config.html#report
+[tool.coverage.report]
+skip_covered = true
+show_missing = true
+ignore_errors = true
+precision = 2
+exclude_lines = [
+    'def __repr__',
+    'pragma: no cover',
+    'raise NotImplementedError',
+    'if TYPE_CHECKING:',
+    'if typing.TYPE_CHECKING:',
+    '@overload',
+    '@abstractmethod',
+    '@abc.abstractmethod',
+    '@typing.overload',
+    '\(Protocol\):$',
+    'typing.assert_never',
+    'assert_never',
+    'if __name__ == .__main__.:',
+]

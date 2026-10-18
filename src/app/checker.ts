@@ -1,20 +1,24 @@
 import { prNewFindings, runGraphCheck, type PrFindings, type PrLintOptions } from '../agent/graph-check.js';
 import type { Config } from '../config.js';
 import { checkMarkdown } from '../format/markdown.js';
-import { loadRuns } from '../format/report.js';
+import type { ExampleRunRow } from '../format/report.js';
 import type { OrgGraph } from '../graph/client.js';
 import * as Q from '../graph/queries.js';
+import { ruleSettingsOf } from '../graph/rule-settings.js';
 import type { Workspaces } from '../hosted/workspaces.js';
 import { addFixes } from '../lint/fixes.js';
+import { exampleKindCounts } from '../lint/maturity.js';
 import { commitTree } from '../lint/sources.js';
 import { loadVerdicts } from '../patch.js';
 import { diffWith } from '../pr/changes.js';
 import { githubSource, prRangeGitHub } from '../pr/github-diff.js';
 import type { PullRequestInfo } from '../pr/github.js';
 import { canonicalPrUrl, recordPullRequest } from '../pr/ingest.js';
+import { examplesToRun, runsAtCommits } from '../sandbox/before-after.js';
 import { clearanceTool, impactTool, rankSectionsTool } from '../tools/graph-tools.js';
 import type { ToolContext } from '../tools/types.js';
 import type { CheckOutcome } from './checks.js';
+import { isPrivateGraph } from './guard.js';
 import type { PrivateWorkspaces } from './private-workspaces.js';
 
 /**
@@ -42,6 +46,20 @@ export interface PrCheckResult extends CheckOutcome {
   /** The graph that answered (`gh-<owner>`, `ghp-<installation>`, or the curated one). */
   graph: string;
   checkId?: string;
+  /** The docs examples graph mode would run, for the App's second phase (src/app/examples.ts). */
+  examples?: ExamplePlan;
+}
+
+/** What the App needs to run the affected examples after the check run is complete. */
+export interface ExamplePlan {
+  /** The pull request as the graph keys it. */
+  prUrl: string;
+  /** The examples graph mode runs (`examplesToRun`: predicted breaks first, at most 3). */
+  candidates: string[];
+  /** The graph that answered, with GitHub read through the installation token. */
+  ctx: ToolContext;
+  /** The same report again, with the example runs recorded since (the before/after table). */
+  render(): Promise<{ report: string; runs: ExampleRunRow[] }>;
 }
 
 export type PrChecker = (req: PrCheckRequest) => Promise<PrCheckResult>;
@@ -130,27 +148,46 @@ export function graphChecker(deps: GraphCheckerDeps): PrChecker {
     const ids = [...new Set(impact.data.sections.map((s) => s.section).filter((id) => id.includes('#')))];
     const ranked = ids.length ? (await rankSectionsTool.run(ctx, { section_ids: ids })).data.ranked : undefined;
     const verdicts = await loadVerdicts(ctx, url);
-    const runs = await loadRuns(ctx, url);
-    const report = checkMarkdown({
-      impact: impact.data,
-      summary: impact.summary,
-      cleared: clearance.data.cleared,
-      ranked,
-      verdicts,
-      runs,
-      org: graph.name,
-      ...(newFindings ? { newFindings } : {}),
-      ...(newFindingsError ? { newFindingsError } : {}),
-    });
+    // Report links ("False positive?") from a private repository carry only the rule, the message's shape and the
+    // version. A spread, so the option reaches checkMarkdown once it takes it (src/format/markdown.ts) and is inert before.
+    const privacy = { private: req.repo.private || isPrivateGraph(graph.name) };
+    // A beta rule cannot fail a check (src/lint/maturity.ts) unless the docs' repository opts it in, read as the audit
+    // reads it (its `[rules]` stored at index time): examples predicted only by other beta kinds are shown, not counted.
+    const predictedAll = impact.data.predicted ?? [];
+    const settings = await ruleSettingsOf(graph, [...new Set(predictedAll.map((p) => p.repo))]);
+    // Runs of this pull request at its current commits (the App's examples check records them).
+    const render = async () => {
+      const runs = await runsAtCommits(ctx, url);
+      const report = checkMarkdown({
+        impact: impact.data,
+        summary: impact.summary,
+        cleared: clearance.data.cleared,
+        ranked,
+        verdicts,
+        runs,
+        org: graph.name,
+        ruleSettings: settings,
+        ...privacy,
+        ...(newFindings ? { newFindings } : {}),
+        ...(newFindingsError ? { newFindingsError } : {}),
+      });
+      return { report, runs };
+    };
+    const { report, runs } = await render();
+    const breaks = runs.filter((r) => r.verdict === 'breaks').length;
+    const candidates = await examplesToRun(graph, impact.data, 3).catch(() => [] as string[]);
     return {
       report,
       ...(newFindings ? { newFindings } : {}),
       ...(newFindingsError ? { newFindingsError } : {}),
-      predicted: new Set((impact.data.predicted ?? []).map((p) => p.example)).size,
+      predicted: new Set(predictedAll.filter((p) => exampleKindCounts(p.kind, settings.get(p.repo))).map((p) => p.example)).size,
       sections: impact.data.totalSections,
       stale: verdicts.filter((v) => v.verdict === 'stale').length,
+      // Runs recorded earlier for this pull request (a re-run after the examples check) count as today's.
+      ...(breaks ? { breaks } : {}),
       graph: graph.name,
       checkId: check.checkId,
+      ...(candidates.length ? { examples: { prUrl: url, candidates, ctx, render } } : {}),
     };
   };
 }

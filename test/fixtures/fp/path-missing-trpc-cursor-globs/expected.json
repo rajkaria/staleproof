@@ -1,0 +1,43 @@
+{
+  "summary": "no finding path-missing at .cursor/rules/tanstack-react-query-tests.mdc:14, .cursor/rules/tanstack-react-query-tests.mdc:96, .cursor/rules/tanstack-react-query-tests.mdc:105",
+  "source": {
+    "repo": "trpc/trpc",
+    "sha": "6d92747fa267c51829ec99242be15e0ed968d0de",
+    "urls": [
+      "https://github.com/trpc/trpc/blob/6d92747fa267c51829ec99242be15e0ed968d0de/.cursor/rules/tanstack-react-query-tests.mdc#L14",
+      "https://github.com/trpc/trpc/blob/6d92747fa267c51829ec99242be15e0ed968d0de/.cursor/rules/tanstack-react-query-tests.mdc#L96",
+      "https://github.com/trpc/trpc/blob/6d92747fa267c51829ec99242be15e0ed968d0de/.cursor/rules/tanstack-react-query-tests.mdc#L105"
+    ]
+  },
+  "why": "Paths in a Cursor rule are relative to the test files its `globs` target (packages/tanstack-react-query/**/*.test.tsx): packages/tanstack-react-query/test/__helpers.tsx and ../src exist. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "path-missing",
+      "file": ".cursor/rules/tanstack-react-query-tests.mdc",
+      "line": 14,
+      "message": "`./__helpers` does not exist in the repository."
+    },
+    {
+      "rule": "path-missing",
+      "file": ".cursor/rules/tanstack-react-query-tests.mdc",
+      "line": 96,
+      "message": "`./__helpers` does not exist in the repository."
+    },
+    {
+      "rule": "path-missing",
+      "file": ".cursor/rules/tanstack-react-query-tests.mdc",
+      "line": 105,
+      "message": "`../src` does not exist in the repository."
+    }
+  ],
+  "files": [
+    ".cursor/rules/tanstack-react-query-tests.mdc",
+    ".gitignore",
+    "LICENSE",
+    "package.json",
+    "packages/tanstack-react-query/src/index.ts",
+    "packages/tanstack-react-query/test/__helpers.tsx",
+    "pnpm-workspace.yaml"
+  ],
+  "builtWith": "0.7.0"
+}

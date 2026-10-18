@@ -1,6 +1,8 @@
-import { examplesSentence, unmeasuredReason, type AuditData, type AuditFinding } from '../audit.js';
+import { examplesSentence, unmeasuredReason, type AuditData, type AuditFinding, type AuditMismatch } from '../audit.js';
 import { MISMATCH_LABEL } from '../indexer/signature.js';
 import { SURFACE_TITLE } from '../lint/format.js';
+import { LOWER_CONFIDENCE_NOTE, LOWER_CONFIDENCE_TITLE } from '../lint/maturity.js';
+import { FP_FORM_URL } from './fp-link.js';
 import { bold, cyan, dim, green, red, yellow } from './text.js';
 
 export const AUDIT_MARKER = '<!-- staleproof-audit -->';
@@ -16,19 +18,32 @@ const shortExample = (id: string) => id.split(':').slice(1).join(':');
 /** How many findings the text and Markdown reports list (the JSON has them all). */
 const MAX_LISTED = 100;
 
-/** Findings grouped under their section title, in order (AI agent instructions first). */
+/** Findings grouped under their section title, in order (AI agent instructions first); beta rules' findings last. */
 function bySurface(findings: AuditFinding[]): [string, AuditFinding[]][] {
   const out = new Map<string, AuditFinding[]>();
-  for (const f of findings) out.set(SURFACE_TITLE[f.surface], [...(out.get(SURFACE_TITLE[f.surface]) ?? []), f]);
+  const lower = findings.filter((f) => f.lowerConfidence);
+  for (const f of findings.filter((x) => !x.lowerConfidence)) out.set(SURFACE_TITLE[f.surface], [...(out.get(SURFACE_TITLE[f.surface]) ?? []), f]);
+  if (lower.length) out.set(LOWER_CONFIDENCE_TITLE, lower);
   return [...out];
+}
+
+/** The findings the reports list: trusted ones first, beta rules' ones after, at most MAX_LISTED. */
+function listed(findings: AuditFinding[]): AuditFinding[] {
+  return [...findings.filter((f) => !f.lowerConfidence), ...findings.filter((f) => f.lowerConfidence)].slice(0, MAX_LISTED);
+}
+
+/** Example mismatches split into the counted ones and those of beta rules (listed apart, never counted). */
+function splitMismatches(d: AuditData): { trusted: AuditMismatch[]; lower: AuditMismatch[] } {
+  return { trusted: d.mismatches.filter((m) => !m.lowerConfidence), lower: d.mismatches.filter((m) => m.lowerConfidence) };
 }
 
 function findingCountsLabel(d: AuditData): string {
   const c = d.findingCounts;
   if (!c) return '';
-  return [c.errors && `${c.errors} error${c.errors === 1 ? '' : 's'}`, c.warnings && `${c.warnings} warning${c.warnings === 1 ? '' : 's'}`, c.infos && `${c.infos} info`]
+  const label = [c.errors && `${c.errors} error${c.errors === 1 ? '' : 's'}`, c.warnings && `${c.warnings} warning${c.warnings === 1 ? '' : 's'}`, c.infos && `${c.infos} info`]
     .filter(Boolean)
     .join(', ');
+  return c.lowerConfidence ? `${label} (${c.lowerConfidence} of them lower confidence)` : label;
 }
 
 /** The README badge for a repository's docs health, served by the hosted API. */
@@ -49,14 +64,16 @@ export function auditText(d: AuditData, summary: string): string {
   const findings = d.findings ?? [];
   if (findings.length) {
     out.push(bold(`Docs references that no longer match the repository (${findings.length}: ${findingCountsLabel(d)})`));
-    for (const [title, list] of bySurface(findings.slice(0, MAX_LISTED))) {
+    for (const [title, list] of bySurface(listed(findings))) {
       out.push(`  ${title}`);
+      if (title === LOWER_CONFIDENCE_TITLE) out.push(dim(`    ${LOWER_CONFIDENCE_NOTE}`));
       for (const f of list) {
         const sev = f.severity === 'error' ? red(f.severity) : f.severity === 'warning' ? yellow(f.severity) : dim(f.severity);
         out.push(`    ${cyan(`${d.repos.length > 1 ? `${f.repo}:` : ''}${f.path}:${f.line}`)} ${sev} ${f.message} ${dim(`[${f.rule}]`)}`);
       }
     }
     if (findings.length > MAX_LISTED) out.push(dim(`  … and ${findings.length - MAX_LISTED} more (--format json lists them all)`));
+    out.push(dim(`  False positive? Report it: ${FP_FORM_URL}`));
     out.push('');
   } else if (d.findings && d.repos.some((r) => r.findingsChecked)) {
     out.push(bold('Docs references'), dim('  every path, link, anchor, command and env var the docs and AI agent files name matches the repository'), '');
@@ -66,12 +83,22 @@ export function auditText(d: AuditData, summary: string): string {
     const total = d.examples.total;
     out.push(bold('Examples that no longer fit the code'), dim(`  none checked: ${total ? `no docs example calls the code (${total} example${total === 1 ? '' : 's'} read)` : 'the docs have no code examples'}`));
   } else {
-    out.push(bold(`Examples that no longer fit the code (${d.examples.mismatched} examples, ${d.mismatches.length} lines)`));
-    if (!d.mismatches.length) out.push(dim('  none found: every call in an example fits the signature it reaches'));
+    const { trusted, lower } = splitMismatches(d);
+    out.push(bold(`Examples that no longer fit the code (${d.examples.mismatched} examples, ${trusted.length} lines)`));
+    if (!trusted.length) out.push(dim(lower.length ? '  none found by the stable checks' : '  none found: every call in an example fits the signature it reaches'));
   }
-  for (const m of d.mismatches) {
-    out.push(`  ${red('✗')} ${cyan(shortExample(m.example))} ${dim(`line ${m.line} · ${m.repo}`)}`);
+  const mismatchLine = (m: AuditMismatch, mark: string) => {
+    out.push(`  ${mark} ${cyan(shortExample(m.example))} ${dim(`line ${m.line} · ${m.repo}`)}`);
     out.push(`    ${m.detail} ${dim(`(${MISMATCH_LABEL[m.kind]}; ${m.call})`)}`);
+  };
+  {
+    const { trusted, lower } = splitMismatches(d);
+    for (const m of trusted) mismatchLine(m, red('✗'));
+    if (lower.length) {
+      out.push(`  ${LOWER_CONFIDENCE_TITLE}`, dim(`    ${LOWER_CONFIDENCE_NOTE}`));
+      for (const m of lower) mismatchLine(m, yellow('?'));
+    }
+    if (d.mismatches.length) out.push(dim(`  False positive? Report it: ${FP_FORM_URL}`));
   }
   out.push('');
   if (d.runs.length) {
@@ -106,8 +133,10 @@ export function auditMarkdown(d: AuditData, summary: string): string {
       `${findingCountsLabel(d)}: paths, links, anchors, commands, CLI flags and env vars that the docs, READMEs and AI agent instructions name and the repository does not have, at the indexed commit.`,
       '',
     );
-    for (const [title, list] of bySurface(findings.slice(0, MAX_LISTED))) {
-      out.push(`**${title}**`, '', '| Where | Problem | Rule |', '|---|---|---|');
+    for (const [title, list] of bySurface(listed(findings))) {
+      out.push(`**${title}**`, '');
+      if (title === LOWER_CONFIDENCE_TITLE) out.push(`<sub>${LOWER_CONFIDENCE_NOTE}</sub>`, '');
+      out.push('| Where | Problem | Rule |', '|---|---|---|');
       for (const f of list) {
         const where = `${d.repos.length > 1 ? `${f.repo}:` : ''}${f.path}:${f.line}`;
         out.push(`| ${f.evidence?.url ? `[${esc(where)}](${f.evidence.url})` : `\`${esc(where)}\``} | ${esc(f.message)}${f.fix?.verified ? ` Fix: ${esc(f.fix.description)}` : ''} | ${f.rule} |`);
@@ -115,6 +144,8 @@ export function auditMarkdown(d: AuditData, summary: string): string {
       out.push('');
     }
     if (findings.length > MAX_LISTED) out.push(`_${findings.length - MAX_LISTED} more not shown (\`staleproof audit --format json\` lists them all)._`, '');
+    // One link, not one per finding: an issue body holds at most 65,536 characters, and each prefilled link can be long.
+    out.push(`<sub>False positive? [Report it](${FP_FORM_URL}).</sub>`, '');
   }
   if (d.mismatches.length) {
     out.push(
@@ -122,13 +153,19 @@ export function auditMarkdown(d: AuditData, summary: string): string {
       '',
       'Each line calls the code in a way the current source rejects: found statically, across repositories, without running anything.',
       '',
-      '| Example | Section | Call | Problem |',
-      '|---|---|---|---|',
     );
-    for (const m of d.mismatches) {
-      out.push(`| [${esc(shortExample(m.example))} line ${m.line}](${m.url}) | ${esc(m.heading)} | \`${esc(m.call)}\` | ${esc(m.detail)} |`);
+    const { trusted, lower } = splitMismatches(d);
+    const table = (list: AuditMismatch[]) => {
+      out.push('| Example | Section | Call | Problem |', '|---|---|---|---|');
+      for (const m of list) out.push(`| [${esc(shortExample(m.example))} line ${m.line}](${m.url}) | ${esc(m.heading)} | \`${esc(m.call)}\` | ${esc(m.detail)} |`);
+      out.push('');
+    };
+    if (trusted.length) table(trusted);
+    if (lower.length) {
+      out.push(`**${LOWER_CONFIDENCE_TITLE}**`, '', `<sub>${LOWER_CONFIDENCE_NOTE}</sub>`, '');
+      table(lower);
     }
-    out.push('');
+    out.push(`<sub>False positive? [Report it](${FP_FORM_URL}).</sub>`, '');
   } else if (!d.examples.linked) {
     out.push(examplesSentence(d), '');
   } else {

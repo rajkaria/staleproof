@@ -1,6 +1,6 @@
 # Pre-commit hooks
 
-Staleproof can stop a commit that makes the docs wrong: on `git commit` it lints what the commit contains (the git index, not the files on disk) against `HEAD` and fails when the staged changes introduce a stale reference in the docs, READMEs or AI agent files, such as a renamed script the README still runs or a moved file `AGENTS.md` still names. A second, optional hook runs on `git push` and fails when a docs example is predicted to break. This page shows the setup for [pre-commit](https://pre-commit.com), lefthook, husky and a plain git hook, what each hook runs, and why the pre-commit hooks run the published package.
+Staleproof can stop a commit that makes the docs wrong: on `git commit` it lints what the commit contains (the git index, not the files on disk) against `HEAD` and fails when the staged changes introduce a stale reference in the docs, READMEs or AI agent files, such as a renamed script the README still runs or a link `AGENTS.md` still follows to a page that moved. A second, optional hook runs on `git push` and fails when a docs example is predicted to break. This page shows the setup for [pre-commit](https://pre-commit.com), lefthook, husky and a plain git hook, what each hook runs, and why the pre-commit hooks run the published package.
 
 ## pre-commit
 
@@ -9,7 +9,7 @@ In `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/rajkaria/staleproof
-    rev: v0.7.0
+    rev: v0.8.0
     hooks:
       - id: staleproof
       # - id: staleproof-predicted   # on push: docs examples predicted to break (needs a graph, below)
@@ -20,9 +20,9 @@ Then `pre-commit install` (and `pre-commit install --hook-type pre-push` for the
 | Hook id | Stage | Runs | Fails when |
 |---|---|---|---|
 | `staleproof` | `pre-commit` | `staleproof lint --new --staged` | The staged changes introduce an error-level finding ([`--fail-on`](lint.md#options) `error`) |
-| `staleproof-predicted` | `pre-push` | `staleproof check --fail-on-predicted` | A docs example (here or in another indexed repository) is predicted to break; needs a Staleproof graph of the repository (`npx staleproof index owner/name` once) |
+| `staleproof-predicted` | `pre-push` | `staleproof check --fail-on-predicted` | A docs example (here or in another indexed repository) is predicted to break by a stable check, or by a beta one `[rules]` opts in; needs a Staleproof graph of the repository (`npx staleproof index owner/name` once) |
 
-Both take no file names (`pass_filenames: false`): a renamed script in `package.json` can make an unstaged README wrong, so the hook lints the whole index. It reads only the local clone; nothing is fetched or sent. To try the hook before adding it: `pre-commit try-repo https://github.com/rajkaria/staleproof staleproof --ref v0.7.0`.
+Both take no file names (`pass_filenames: false`): a renamed script in `package.json` can make an unstaged README wrong, so the hook lints the whole index. It reads only the local clone; nothing is fetched or sent. To try the hook before adding it: `pre-commit try-repo https://github.com/rajkaria/staleproof staleproof --ref v0.8.0`.
 
 ### Why the hooks run the published package
 
@@ -36,11 +36,11 @@ In `lefthook.yml`:
 pre-commit:
   commands:
     staleproof:
-      run: npx -y staleproof@0.7.0 lint --new --staged
+      run: npx -y staleproof@0.8.0 lint --new --staged
 pre-push:
   commands:
     staleproof-predicted:
-      run: npx -y staleproof@0.7.0 check --fail-on-predicted
+      run: npx -y staleproof@0.8.0 check --fail-on-predicted
 ```
 
 `staleproof init` adds the `pre-commit` command when `lefthook.yml` has no `pre-commit:` block yet, and prints it to add by hand otherwise.
@@ -50,7 +50,7 @@ pre-push:
 In `.husky/pre-commit` (husky 9):
 
 ```bash
-npx -y staleproof@0.7.0 lint --new --staged
+npx -y staleproof@0.8.0 lint --new --staged
 ```
 
 `staleproof init` appends the line when `.husky/` exists. In a project with Staleproof as a dependency, `npx --no-install staleproof` uses that copy instead (init picks it).
@@ -58,7 +58,7 @@ npx -y staleproof@0.7.0 lint --new --staged
 ## A plain git hook
 
 ```bash
-printf '#!/bin/sh\nexec npx -y staleproof@0.7.0 lint --new --staged\n' > .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+printf '#!/bin/sh\nexec npx -y staleproof@0.8.0 lint --new --staged\n' > .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
 ```
 
 ## Skipping it once

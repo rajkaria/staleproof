@@ -1,4 +1,5 @@
 import type { RuleId, Severity, Surface } from './types.js';
+import { withMaturity, type Maturity } from './maturity.js';
 
 export interface RuleInfo {
   id: RuleId;
@@ -14,12 +15,19 @@ export interface RuleInfo {
   fixable: boolean;
   /** Not implemented yet: listed so configs that name it stay valid. */
   planned?: boolean;
+  /**
+   * `stable`, or `beta`: reported at info and marked lower confidence (never fails a check or lowers a score)
+   * until `[rules]` opts it in. `severity` stays the severity the rule has when trusted. From src/lint/maturity.ts.
+   */
+  maturity: Maturity;
+  /** The precision evidence for `maturity`. */
+  maturityWhy: string;
 }
 
 const DOC_SURFACES: Surface[] = ['agent', 'readme', 'docs'];
 
 /** Every rule, in the order reports and docs/rules.md list them. */
-export const RULES: RuleInfo[] = [
+export const RULES: RuleInfo[] = withMaturity<Omit<RuleInfo, 'maturity' | 'maturityWhy'>>([
   {
     id: 'path-missing',
     severity: 'error',
@@ -182,7 +190,7 @@ export const RULES: RuleInfo[] = [
     surfaces: ['example'],
     fixable: true,
   },
-];
+]);
 
 export const RULE_BY_ID = new Map<RuleId, RuleInfo>(RULES.map((r) => [r.id, r]));
 

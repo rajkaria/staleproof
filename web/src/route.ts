@@ -1,6 +1,6 @@
 /**
  * Hash routes: `#/`, `#/use-cases` (a home section), `#/try?pr=<url>` (start a check),
- * `#/check/<id>`, `#/install?repo=<owner/name>`, `#/audit?repo=<owner/name>`, `#/model`, `#/docs/<slug>/<anchor>`.
+ * `#/check/<id>`, `#/install?repo=<owner/name>`, `#/audit?repo=<owner/name>`, `#/drift`, `#/model`, `#/docs/<slug>/<anchor>`.
  */
 
 /** Sections of the home page that have their own route (`#/use-cases` scrolls there). */
@@ -11,6 +11,7 @@ export type Route =
   | { page: 'check'; id: string }
   | { page: 'install'; repo?: string }
   | { page: 'audit'; repo?: string }
+  | { page: 'drift' }
   | { page: 'model' }
   | { page: 'docs'; slug?: string; anchor?: string };
 
@@ -23,6 +24,7 @@ export function parseRoute(hash: string): Route {
   if (h === 'model') return { page: 'model' };
   if (h === 'install') return { page: 'install', repo: params.get('repo') ?? undefined };
   if (h === 'audit') return { page: 'audit', repo: params.get('repo') ?? undefined };
+  if (h === 'drift' || h === 'drift-hall') return { page: 'drift' };
   if (h === 'docs' || h.startsWith('docs/')) {
     const [, slug, ...rest] = h.split('/');
     return { page: 'docs', slug: slug || undefined, anchor: rest.length ? decodeURIComponent(rest.join('/')) : undefined };

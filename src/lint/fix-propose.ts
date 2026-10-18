@@ -389,6 +389,10 @@ async function fixAnchor(f: Finding, ctx: Context): Promise<Fix | undefined> {
   const anchor = text.slice(hash + 1);
   if (!anchor || /[%\s]/.test(anchor)) return undefined;
   const target = f.subject.slice(0, f.subject.lastIndexOf('#')) || f.path;
+  // The check knows no safe fix (an empty candidate list): a docs site resolves this anchor its own way, and a
+  // GitHub anchor would break the link there (Drift Hall: zustand, sqlmodel, huggingface_hub).
+  const hint = await ctx.hint(f);
+  if (hint?.candidates && hint.candidates.length === 0) return undefined;
   const renamed = ctx.o.renames?.anchors.get(target)?.get(anchor.toLowerCase());
   let to = renamed?.size === 1 ? [...renamed][0] : undefined;
   let why = 'heading renamed in this change';
@@ -401,7 +405,7 @@ async function fixAnchor(f: Finding, ctx: Context): Promise<Fix | undefined> {
     }
   }
   if (!to) {
-    const anchors = (await ctx.hint(f))?.candidates ?? [...((await ctx.facts.anchors(target)) ?? [])];
+    const anchors = hint?.candidates ?? [...((await ctx.facts.anchors(target)) ?? [])];
     to = closestName(anchor.toLowerCase(), anchors, 3);
     why = 'the closest heading';
   }

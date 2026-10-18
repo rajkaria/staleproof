@@ -9,3 +9,4 @@ export { signBody, verifySignature, MAX_WEBHOOK_BYTES } from './webhook.js';
 export { AppRegistry, APP_REGISTRY } from './registry.js';
 export { PrivateWorkspaces } from './private-workspaces.js';
 export { graphChecker, type PrChecker, type PrCheckRequest, type PrCheckResult } from './checker.js';
+export { examplesSetup, EXAMPLES_CHECK_NAME, type AppExamplesOptions, type ExamplesSetup } from './examples.js';

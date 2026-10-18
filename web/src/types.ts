@@ -232,7 +232,8 @@ export interface AuditData {
   grade: 'A' | 'B' | 'C' | 'D' | 'F';
   deductions: { points: number; why: string }[];
   examples: { total: number; python: number; linked: number; mismatched: number };
-  mismatches: { example: string; url: string; repo: string; path: string; heading: string; line: number; kind: MismatchKind; detail: string; call: string; symbol: string }[];
+  /** `lowerConfidence`: a beta check's line (src/lint/maturity.ts), listed apart and never counted (0.8). */
+  mismatches: { example: string; url: string; repo: string; path: string; heading: string; line: number; kind: MismatchKind; detail: string; call: string; symbol: string; lowerConfidence?: boolean }[];
   coverage: { api: number; documented: number; percent: number };
   undocumented: { qualname: string; repo: string; kind: string; signature: string; url: string; callers: number; crossRepoCallers: number }[];
   runs: { example: string; url: string; status: 'pass' | 'fail' | 'timeout' | 'skipped' | 'error'; error: string; reason: string }[];

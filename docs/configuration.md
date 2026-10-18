@@ -260,7 +260,7 @@ agent-files = ["prompts/*.md"]     # extra AI agent instruction files
 | `lint.include` | list of globs | Files checked by `staleproof lint` besides the docs, READMEs and agent files |
 | `lint.exclude` | list of globs | Files `staleproof lint` never checks |
 | `lint.agent-files` | list of globs | Files reported under "AI agent instructions" (listed first, and checked strictly: see [Lint](lint.md#precision-first)) |
-| `rules.<rule-id>` | `off`, `info`, `warning` or `error` | Turn a [rule](rules.md) off or change its severity |
+| `rules.<rule-id>` | `off`, `info`, `warning` or `error` | Turn a [rule](rules.md) off or change its severity. Setting a beta rule to any level opts it in: its findings count like any other rule's at that level (the [audit](audit.md#the-score) counts its example lines at `warning` or `error`) |
 
 `staleproof fix`, the suggestions and the fix pull request follow the same settings: a rule turned `"off"` is neither reported nor fixed, and files under `ignore`, `[lint] exclude` or a `<!-- staleproof: ignore-file -->` comment are never edited. Fixes are never made on migration guides, release notes and old versions' docs (they name what is gone on purpose).
 
@@ -307,6 +307,7 @@ The [GitHub App](github-app.md#configuration) reads `[app]` (in `pyproject.toml`
 | `app.also-index` | list of `owner/name` | Repositories indexed with this one |
 | `app.fix-prs` | `false` (default) / `true` | Daily docs fix pull request |
 | `app.audit-issue` | `false` (default) / `true` | Daily audit issue |
+| `app.run-examples` | `true` (default) / `false` | Run the affected docs examples before and after in a sandbox, when the server has example runs switched on (not yet on staleproof.dev) |
 
 ### Example directives
 

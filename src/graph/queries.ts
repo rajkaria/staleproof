@@ -769,8 +769,10 @@ export const auditMismatches = q('report', 'auditMismatches', 'Every example lin
   MATCH (e:CodeExample)-[m:MISMATCH]->(s:Symbol)
   WHERE e.status = 'live' AND (e.repo IN $repos OR s.repo IN $repos)
   OPTIONAL MATCH (e)-[:IN_SECTION]->(sec:DocSection)
+  OPTIONAL MATCH (dr:Repo {name: e.repo})
   RETURN e.id AS example, e.url AS url, e.repo AS repo, e.path AS path, coalesce(sec.heading_path, e.path) AS heading,
-         m.line AS line, m.kind AS kind, m.detail AS detail, m.text AS call, s.qualname AS symbol, s.repo AS symbolRepo
+         m.line AS line, m.kind AS kind, m.detail AS detail, m.text AS call, s.qualname AS symbol, s.repo AS symbolRepo,
+         dr.rule_settings AS ruleSettings
   ORDER BY repo, path, line
 `);
 
@@ -811,8 +813,14 @@ export const auditFindings = q('report', 'auditFindings', 'What lint found at in
   OPTIONAL MATCH (f)-[:IN_SECTION]->(d:DocSection)
   RETURN f.rule AS rule, f.severity AS severity, f.message AS message, f.repo AS repo, f.path AS path, f.line AS line, f.column AS column,
          f.endLine AS endLine, f.endColumn AS endColumn, f.surface AS surface, f.subject AS subject, f.evidence AS evidence, f.fix AS fix,
-         f.fingerprint AS fingerprint, d.heading_path AS heading
+         f.fingerprint AS fingerprint, f.lowerConfidence AS lowerConfidence, d.heading_path AS heading
   ORDER BY repo, path, line, column
+`);
+
+export const repoRuleSettings = q('report', 'repoRuleSettings', 'The `[rules]` each repository had when it was indexed (JSON), so a check counts a beta example rule the repository opts in.', `
+  MATCH (r:Repo)
+  WHERE r.name IN $repos
+  RETURN r.name AS name, r.rule_settings AS ruleSettings
 `);
 
 export const ALL_QUERIES: NamedQuery[] = [
@@ -878,6 +886,7 @@ export const ALL_QUERIES: NamedQuery[] = [
   auditExamples,
   auditRuns,
   auditFindings,
+  repoRuleSettings,
   markGoneDocs,
   deleteRepoFindings,
   findingSections,

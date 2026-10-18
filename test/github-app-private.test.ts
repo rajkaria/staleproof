@@ -13,6 +13,7 @@ import { registerGitHubAppRoutes } from '../src/app/routes.js';
 import type { HandleResult } from '../src/app/service.js';
 import { signBody } from '../src/app/webhook.js';
 import type { Config } from '../src/config.js';
+import { PRIVATE_REPO } from '../src/format/fp-link.js';
 import { COMMENT_MARKER, NEW_FINDINGS_HEADING } from '../src/format/markdown.js';
 import { GraphStore } from '../src/graph/client.js';
 import { Workspaces } from '../src/hosted/workspaces.js';
@@ -142,6 +143,15 @@ describe('a private repository', () => {
     expect(final.output.summary.startsWith(COMMENT_MARKER)).toBe(true);
     expect(final.output.summary).toContain(NEW_FINDINGS_HEADING);
     expect(final.output.summary).toContain('ghp-');
+    // "False positive?" links (src/format/fp-link.ts) from a private repository share nothing about it.
+    const reportLinks = [...final.output.summary.matchAll(/\((https:\/\/github\.com\/rajkaria\/staleproof\/issues\/new\?[^)\s]+)\)/g)];
+    expect(reportLinks.length).toBeGreaterThan(0);
+    for (const m of reportLinks) {
+      const link = new URL(m[1]!);
+      expect(link.searchParams.get('repository')).toBe(PRIVATE_REPO);
+      expect(link.searchParams.has('location')).toBe(false);
+      expect(decodeURIComponent(link.href).toLowerCase()).not.toContain(REPO.toLowerCase());
+    }
     const annotations = run.updates.flatMap((u) => u.output?.annotations ?? []);
     const where = annotations.map((a) => `${a.path}:${a.start_line} ${a.title.split(':')[0]}`).sort();
     expect(where).toEqual(['AGENTS.md:3 command-missing', 'README.md:3 command-missing', 'README.md:5 link-broken']);

@@ -7,6 +7,7 @@ import { PACKAGE, PRODUCT } from './docs/manifest';
 import { num, seedRepoColors } from './format';
 import { InstallPage } from './Install';
 import { AuditPage } from './Audit';
+import { DriftHallPage } from './DriftHall';
 import { Landing } from './Landing';
 import { Footer, Header } from './layout';
 import { HOME_SECTIONS, parseRoute, type Route } from './route';
@@ -40,6 +41,7 @@ export function App() {
   useEffect(() => {
     if (route.page === 'install') document.title = `Install ${PRODUCT}`;
     else if (route.page === 'audit') document.title = `Docs audit${route.repo ? ` · ${route.repo}` : ''} · ${PRODUCT}`;
+    else if (route.page === 'drift') document.title = `Drift Hall · ${PRODUCT}`;
     else if (route.page !== 'docs') document.title = `${PRODUCT} — keep docs true to code`;
   }, [route]);
   // Section routes (#/use-cases) scroll once the landing is on screen.
@@ -61,7 +63,7 @@ export function App() {
   }, [facts]);
 
   const current =
-    route.page === 'docs' ? 'docs' : route.page === 'model' ? 'model' : route.page === 'install' ? 'install' : route.page === 'audit' ? 'audit' : route.page === 'home' ? route.section : undefined;
+    route.page === 'docs' ? 'docs' : route.page === 'model' ? 'model' : route.page === 'install' ? 'install' : route.page === 'audit' ? 'audit' : route.page === 'drift' ? 'drift' : route.page === 'home' ? route.section : undefined;
   const banners = (
     <>
       {loadError && <div className="banner err">The API is unreachable: {loadError}</div>}
@@ -98,6 +100,7 @@ export function App() {
         )}
         {route.page === 'install' && <InstallPage initialRepo={route.repo} health={health} />}
         {route.page === 'audit' && <AuditPage initialRepo={route.repo} health={health} />}
+        {route.page === 'drift' && <DriftHallPage />}
         {route.page === 'model' && (
           <div className="wrap page-pad">
             <ModelPage />

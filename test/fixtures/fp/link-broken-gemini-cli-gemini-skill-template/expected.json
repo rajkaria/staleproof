@@ -1,0 +1,27 @@
+{
+  "summary": "no finding link-broken at .gemini/skills/docs-changelog/references/preview_template.md:6",
+  "source": {
+    "repo": "google-gemini/gemini-cli",
+    "sha": "ed96faedfd5571f055c44f2c9509d62321d1138d",
+    "urls": [
+      "https://github.com/google-gemini/gemini-cli/blob/ed96faedfd5571f055c44f2c9509d62321d1138d/.gemini/skills/docs-changelog/references/preview_template.md#L6"
+    ]
+  },
+  "why": "A template the docs-changelog skill copies into docs/changelogs/preview.md, where latest.md resolves; {{version}} placeholders mark it as one. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "link-broken",
+      "file": ".gemini/skills/docs-changelog/references/preview_template.md",
+      "line": 6,
+      "message": "The link target `.gemini/skills/docs-changelog/references/latest.md` does not exist."
+    }
+  ],
+  "files": [
+    ".gemini/skills/docs-changelog/references/preview_template.md",
+    ".gitignore",
+    "LICENSE",
+    "Makefile",
+    "package.json"
+  ],
+  "builtWith": "0.7.0"
+}

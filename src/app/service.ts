@@ -9,6 +9,7 @@ import { keepAuditIssue, type AuditIssueResult } from './audit-issue.js';
 import { graphChecker, type PrChecker } from './checker.js';
 import { BranchMovedError, commitFixes, fixesPatch } from './commit-fixes.js';
 import type { GitHubAppEnv } from './env.js';
+import { examplesSetup, type AppExamplesOptions, type ExamplesSetup } from './examples.js';
 import { GitHubApiError, GitHubAppClient, type InstallationClient } from './github-app.js';
 import { privateGraphName } from './guard.js';
 import { checkPullRequest, storedFixes, type PrCheckSummary, type SuggestFn } from './pr-check.js';
@@ -77,6 +78,8 @@ export interface GitHubAppDeps {
   limits?: Partial<HostedLimits>;
   /** The daily cron stops starting new repositories after this long (default 240 s). */
   cronBudgetMs?: number;
+  /** Running the affected docs examples in a Vercel Sandbox after the check (src/app/examples.ts; off unless STALEPROOF_APP_RUN_EXAMPLES=on). */
+  examples?: AppExamplesOptions;
 }
 
 export interface HandleResult {
@@ -106,6 +109,7 @@ export class GitHubAppService {
   readonly workspaces: Workspaces;
   readonly privateWorkspaces: PrivateWorkspaces;
   readonly checker: PrChecker;
+  readonly examples: ExamplesSetup;
   readonly log: (msg: string) => void;
 
   constructor(
@@ -118,6 +122,7 @@ export class GitHubAppService {
     this.workspaces = deps.workspaces ?? new Workspaces(deps.store, deps.config, deps.store.org(deps.config.org), { fetchImpl: deps.fetchImpl });
     this.privateWorkspaces = new PrivateWorkspaces(deps.store, deps.config, this.registry, { limits: deps.limits, fetchImpl: deps.fetchImpl, hosted: this.workspaces });
     this.checker = deps.checker ?? graphChecker({ config: deps.config, workspaces: this.workspaces, privateWorkspaces: this.privateWorkspaces, fetchImpl: deps.fetchImpl });
+    this.examples = examplesSetup(deps.examples);
   }
 
   get botLogin(): string | undefined {
@@ -125,7 +130,16 @@ export class GitHubAppService {
   }
 
   private prContext() {
-    return { app: this.client, registry: this.registry, checker: this.checker, botLogin: this.botLogin, suggest: this.deps.suggest, log: this.log };
+    return {
+      app: this.client,
+      registry: this.registry,
+      checker: this.checker,
+      botLogin: this.botLogin,
+      suggest: this.deps.suggest,
+      log: this.log,
+      examples: this.examples,
+      ...(this.deps.waitUntil ? { waitUntil: this.deps.waitUntil } : {}),
+    };
   }
 
   async handle(event: string, payload: unknown): Promise<HandleResult> {

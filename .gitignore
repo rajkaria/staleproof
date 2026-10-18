@@ -18,4 +18,6 @@ editors/zed/extension.wasm
 .vercel
 .env*
 CLAUDE.md
+# …but a false-positive fixture may need a project's own CLAUDE.md
+!test/fixtures/fp/**/CLAUDE.md
 docs/context/

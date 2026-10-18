@@ -1,0 +1,28 @@
+{
+  "summary": "no finding link-broken at guides/04_additional-features/07_sharing-your-app.md:187",
+  "source": {
+    "repo": "gradio-app/gradio",
+    "sha": "de986c72372e233ffaaa7abe1b93608d4d115065",
+    "urls": [
+      "https://github.com/gradio-app/gradio/blob/de986c72372e233ffaaa7abe1b93608d4d115065/guides/04_additional-features/07_sharing-your-app.md#L187"
+    ]
+  },
+  "why": "gradio.app serves every guide at /guides/<name> without its number prefix or category folder. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "link-broken",
+      "file": "guides/04_additional-features/07_sharing-your-app.md",
+      "line": 187,
+      "message": "The link target `guides/04_additional-features/view-api-page` does not exist."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "guides/04_additional-features/07_sharing-your-app.md",
+    "package.json",
+    "pnpm-workspace.yaml",
+    "pyproject.toml"
+  ],
+  "builtWith": "0.7.0"
+}

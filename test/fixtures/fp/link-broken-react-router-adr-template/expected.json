@@ -1,0 +1,27 @@
+{
+  "summary": "no finding link-broken at decisions/template.md:5",
+  "source": {
+    "repo": "remix-run/react-router",
+    "sha": "ba64bc919b9e7100fa94825ab44d51f1b76c39f1",
+    "urls": [
+      "https://github.com/remix-run/react-router/blob/ba64bc919b9e7100fa94825ab44d51f1b76c39f1/decisions/template.md#L5"
+    ]
+  },
+  "why": "An ADR template: \"superseded by [0005](0005-example.md)\" next to \"Date: YYYY-MM-DD\" is a placeholder. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "link-broken",
+      "file": "decisions/template.md",
+      "line": 5,
+      "message": "The link target `decisions/0005-example.md` does not exist."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE.md",
+    "decisions/template.md",
+    "package.json",
+    "pnpm-workspace.yaml"
+  ],
+  "builtWith": "0.7.0"
+}

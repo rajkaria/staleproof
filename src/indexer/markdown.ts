@@ -162,7 +162,8 @@ export function scanMarkdown(path: string, text: string): MdDoc {
     const lineNo = i + 1;
 
     if (fence) {
-      const close = new RegExp(`^\\s*${escape(fence.char)}{${fence.len},}\\s*$`);
+      // A block inside an HTML or MDX comment may close the comment on its fence line (zod: ```` ``` --> ````).
+      const close = new RegExp(`^\\s*${escape(fence.char)}{${fence.len},}\\s*(?:-->|\\*\\/\\s*\\})?\\s*$`);
       if (close.test(line)) {
         examples.push({
           index: examples.length,
@@ -217,7 +218,8 @@ export function scanMarkdown(path: string, text: string): MdDoc {
     }
     // CommonMark destinations, as lint reads them (src/lint/scan.ts): `<…>` with spaces and parentheses.
     for (const d of inlineLinkDestinations(line)) current.links.push({ target: d.text, line: lineNo });
-    for (const m of line.matchAll(/\bhref=["']([^"']+)["']/g)) {
+    // Not a Vue binding (`:href="dep.funding"`, `v-bind:href`): its value is an expression.
+    for (const m of line.matchAll(/(?<![:\w.-])href=["']([^"']+)["']/g)) {
       current.links.push({ target: m[1]!, line: lineNo });
     }
   }
@@ -249,8 +251,10 @@ function newSection(anchor: string, title: string, level: number, headingPath: s
 function cleanHeading(raw: string): { text: string; id?: string } {
   let id: string | undefined;
   const text = raw
-    .replace(/\s*\{#([\w-]+)\}\s*$/, (_, x: string) => {
-      id = x;
+    // An explicit id: `{#id}`, MkDocs attr_list's `{ #id }` / `{ #id .class }` (fastapi, marimo), hf doc-builder's
+    // `[[id]]` (huggingface_hub's translations keep the English ids that way).
+    .replace(/\s*(?:\{\s*#([\w-]+)(?:\s+[^}]*)?\}|\[\[([\w-]+)\]\])\s*$/, (_, x: string | undefined, y: string | undefined) => {
+      id = x ?? y;
       return '';
     })
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')

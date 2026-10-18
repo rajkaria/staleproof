@@ -10,7 +10,7 @@
   "functions": {
     "api/index.js": {
       "maxDuration": 300,
-      "includeFiles": "{dist/**,grammars/**,python/**,package.json}"
+      "includeFiles": "{dist/**,grammars/**,python/**,scripts/falkordb-local.sh,package.json}"
     }
   },
   "headers": [

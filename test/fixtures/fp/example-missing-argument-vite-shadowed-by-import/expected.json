@@ -1,0 +1,30 @@
+{
+  "summary": "no finding example-missing-argument at docs/guide/api-plugin.md:72",
+  "source": {
+    "repo": "vitejs/vite",
+    "sha": "df7503cc499e0b49e45701e3be7546918ee9d322",
+    "urls": [
+      "https://github.com/vitejs/vite/blob/df7503cc499e0b49e45701e3be7546918ee9d322/docs/guide/api-plugin.md#L72"
+    ]
+  },
+  "why": "The block at line 59 shows a plugin preset's own file (export default function framework(config) {...}); the next block, vite.config.js, imports framework from 'vite-plugin-framework' and calls framework(). The call was judged against the earlier block's definition, which the import replaces; and config is an untyped JavaScript parameter, optional at run time.",
+  "absent": [
+    {
+      "rule": "example-missing-argument",
+      "file": "docs/guide/api-plugin.md",
+      "line": 72,
+      "message": "`framework` requires `config`, which the example does not pass."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "docs/guide/api-plugin.md",
+    "docs/package.json",
+    "package.json",
+    "packages/vite/package.json",
+    "packages/vite/src/node/plugins/workerImportMetaUrl.ts",
+    "pnpm-workspace.yaml"
+  ],
+  "builtWith": "0.7.0"
+}

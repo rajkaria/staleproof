@@ -1,0 +1,31 @@
+{
+  "summary": "no finding path-missing at ui-v2/e2e/AGENTS.md:327",
+  "source": {
+    "repo": "PrefectHQ/prefect",
+    "sha": "87b5243845e733ed938b21cf7b9aeda6d6a4e194",
+    "urls": [
+      "https://github.com/PrefectHQ/prefect/blob/87b5243845e733ed938b21cf7b9aeda6d6a4e194/ui-v2/e2e/AGENTS.md#L327"
+    ]
+  },
+  "why": "`../fixtures` is the import path from a test file in a subdirectory of ui-v2/e2e/; ui-v2/e2e/fixtures/ exists. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "path-missing",
+      "file": "ui-v2/e2e/AGENTS.md",
+      "line": 327,
+      "message": "`../fixtures` does not exist in the repository."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "docs/docs.json",
+    "justfile",
+    "pyproject.toml",
+    "ui-v2/.gitignore",
+    "ui-v2/e2e/AGENTS.md",
+    "ui-v2/e2e/fixtures/api-client.ts",
+    "ui-v2/package.json"
+  ],
+  "builtWith": "0.7.0"
+}

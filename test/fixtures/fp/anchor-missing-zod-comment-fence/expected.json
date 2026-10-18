@@ -1,0 +1,33 @@
+{
+  "summary": "no finding anchor-missing at packages/docs-v3/home.md:103, packages/docs-v3/home.md:122",
+  "source": {
+    "repo": "colinhacks/zod",
+    "sha": "680d19f7d1e042e55934209caeb79bc843b94f44",
+    "urls": [
+      "https://github.com/colinhacks/zod/blob/680d19f7d1e042e55934209caeb79bc843b94f44/packages/docs-v3/home.md#L103",
+      "https://github.com/colinhacks/zod/blob/680d19f7d1e042e55934209caeb79bc843b94f44/packages/docs-v3/home.md#L122"
+    ]
+  },
+  "why": "Both headings exist ('## Recursive types' at line 1756, '### `.superRefine`' at 2227). Each comes right after an HTML comment that holds a code block and closes on the fence's line (``` -->, lines 1752 and 2225); Staleproof's heading scan stays inside the comment and loses every heading until the next -->. GitHub renders the headings and their anchors.",
+  "absent": [
+    {
+      "rule": "anchor-missing",
+      "file": "packages/docs-v3/home.md",
+      "line": 103,
+      "message": "This page has no heading `#recursive-types`."
+    },
+    {
+      "rule": "anchor-missing",
+      "file": "packages/docs-v3/home.md",
+      "line": 122,
+      "message": "This page has no heading `#superrefine`."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "package.json",
+    "packages/docs-v3/home.md"
+  ],
+  "builtWith": "0.6.1"
+}

@@ -46,6 +46,8 @@ Quick facts for assistants:
 ## Reference
 
 - [Lint rules](docs/rules.md): Every staleproof lint rule: default severity, where it looks, an example of the stale text and the message it gets.
+- [False positives](docs/false-positives.md): Report a wrong finding in one click; every report becomes a regression fixture, and rules earn trust before they can fail a check.
+- [Drift Hall](docs/drift-hall.md): Staleproof run on about sixty popular repositories it was never tuned on, every finding hand-checked at a pinned commit: the confirmed drift with links to the lines, the false positives counted by rule and cause, the fixes offered upstream, and how to reproduce it.
 - [Tools reference](docs/tools.md): The fourteen tools the agent and MCP clients call: parameters, results, errors and the Cypher each one runs.
 - [Configuration](docs/configuration.md): Every environment variable and global CLI option, with defaults, and the per-repository .staleproof.toml.
 - [Graph model and Cypher](docs/GRAPH-MODEL.md): Every Cypher statement Staleproof sends to FalkorDB, named and explained, generated from the code.

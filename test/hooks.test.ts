@@ -26,6 +26,16 @@ async function input(name: string, root: string): Promise<string> {
   return (await readFile(join(HOOKS, 'inputs', `${name}.json`), 'utf8')).replaceAll('{{root}}', root);
 }
 
+/**
+ * The fixture's README example breaks with `example-unknown-keyword`, a beta rule (src/lint/maturity.ts): it never
+ * blocks unless `[rules]` opts it in, so the tests of blocking opt it in first (committed, as a repository would).
+ */
+async function optIn(root: string, extra = ''): Promise<void> {
+  await writeFile(join(root, '.staleproof.toml'), `${extra}[rules]\n"example-unknown-keyword" = "error"\n`);
+  gitIn(root, 'add', '-A');
+  gitIn(root, 'commit', '-q', '-m', 'opt the example rule in');
+}
+
 async function edit(root: string, path: string, from: string, to: string): Promise<void> {
   const text = await readFile(join(root, path), 'utf8');
   if (!text.includes(from)) throw new Error(`${path} has no ${from}`);
@@ -108,7 +118,45 @@ describe('coding-agent hooks', () => {
     expect(text).toContain('[command-missing]');
   });
 
+  it('stop: a beta rule\'s finding is reported after the edit but never blocks, unless [rules] opts it in', async () => {
+    await hook('session-start', root, 'claude-session-start');
+    await edit(root, 'demo/client.py', 'def connect(host, timeout=10):', 'def connect(host, deadline=10):');
+    expect(context(await hook('post-edit', root, 'claude-post-edit-signature'))).toContain('README.md:8:8 `connect` has no parameter `timeout`.');
+    expect((await hook('stop', root, 'claude-stop'))?.decision).toBeUndefined();
+    expect((await hook('stop', root, 'cursor-stop'))?.followup_message).toBeUndefined();
+  });
+
+  it('stop: a predicted break of a beta kind is listed but blocks only when [rules] opts it in at warning or error', async () => {
+    // A local graph predicts the break (here handed in; the hook asks a running local FalkorDB otherwise).
+    const predicted = [{ example: 'docs/usage.md', line: 3, detail: '`connect` requires `deadline`, which the example does not pass', kind: 'missing-argument' }];
+    let n = 0;
+    const stopWith = async () => {
+      await hook('session-start', root, 'claude-session-start');
+      // A harmless edit, a new one each time: the session edited a file and made nothing wrong itself.
+      const file = join(root, 'demo', 'client.py');
+      await writeFile(file, `${await readFile(file, 'utf8')}\n# note ${++n}\n`);
+      await hook('post-edit', root, 'claude-post-edit-docstring');
+      const r = await runHook('stop', await input('claude-stop', root), { env: env(), graph: false, predicted, timeoutMs: 60_000 });
+      return r.stdout ? (JSON.parse(r.stdout) as Record<string, string>) : undefined;
+    };
+    const quiet = await stopWith();
+    expect(quiet?.decision).toBeUndefined();
+    expect(quiet?.systemMessage).toContain('- docs/usage.md:3 is predicted to break: `connect` requires `deadline`');
+    // At info the rule is trusted but still no reason to block; at warning it counts.
+    await writeFile(join(root, '.staleproof.toml'), '[rules]\n"example-missing-argument" = "info"\n');
+    gitIn(root, 'add', '-A');
+    gitIn(root, 'commit', '-q', '-m', 'info');
+    expect((await stopWith())?.decision).toBeUndefined();
+    await writeFile(join(root, '.staleproof.toml'), '[rules]\n"example-missing-argument" = "warning"\n');
+    gitIn(root, 'add', '-A');
+    gitIn(root, 'commit', '-q', '-m', 'warning');
+    const blocked = await stopWith();
+    expect(blocked?.decision).toBe('block');
+    expect(blocked?.reason).toContain('Staleproof: 1 doc reference this session made wrong');
+  });
+
   it('stop: blocks once with the new error findings, never when already continuing', async () => {
+    await optIn(root);
     await hook('session-start', root, 'claude-session-start');
     await edit(root, 'demo/client.py', 'def connect(host, timeout=10):', 'def connect(host, deadline=10):');
     await hook('post-edit', root, 'claude-post-edit-signature');
@@ -147,6 +195,7 @@ describe('coding-agent hooks', () => {
   });
 
   it('a session-start hook that finishes after the first edit loses nothing', async () => {
+    await optIn(root);
     await edit(root, 'demo/client.py', 'def connect(host, timeout=10):', 'def connect(host, deadline=10):');
     await hook('post-edit', root, 'claude-post-edit-signature');
     await hook('session-start', root, 'claude-session-start');
@@ -164,9 +213,7 @@ describe('coding-agent hooks', () => {
   });
 
   it('stop: [hooks] stop = "warn" tells the user only; STALEPROOF_HOOK wins over the config', async () => {
-    await writeFile(join(root, '.staleproof.toml'), '[hooks]\nstop = "warn"\n');
-    gitIn(root, 'add', '-A');
-    gitIn(root, 'commit', '-q', '-m', 'config');
+    await optIn(root, '[hooks]\nstop = "warn"\n');
     await edit(root, 'demo/client.py', 'def connect(host, timeout=10):', 'def connect(host, deadline=10):');
     await hook('post-edit', root, 'claude-post-edit-signature');
     const warned = await hook('stop', root, 'claude-stop');
@@ -178,6 +225,7 @@ describe('coding-agent hooks', () => {
   });
 
   it('Cursor: additional_context after an edit, one follow-up before stopping', async () => {
+    await optIn(root);
     await edit(root, 'demo/client.py', 'def connect(host, timeout=10):', 'def connect(host, deadline=10):');
     const after = await hook('post-edit', root, 'cursor-post-tool-use');
     expect(after?.additional_context).toContain('README.md:8:8 `connect` has no parameter `timeout`.');

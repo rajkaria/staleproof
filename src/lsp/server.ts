@@ -18,6 +18,7 @@ import {
   type WorkspaceEdit,
 } from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
+import { falsePositiveUrl, FP_NEW_ISSUE } from '../format/fp-link.js';
 import { gitRoot } from '../lint/sources.js';
 import type { Finding, TextEdit } from '../lint/types.js';
 import { packageVersion } from '../pkg.js';
@@ -32,6 +33,7 @@ export const COMMANDS = {
   fixAll: 'staleproof.fixAll',
   audit: 'staleproof.audit',
   openReferences: 'staleproof.openReferences',
+  reportFalsePositive: 'staleproof.reportFalsePositive',
 } as const;
 
 /** A client-side command a client may declare (`initializationOptions.clientCommands`): VS Code's references peek. */
@@ -393,6 +395,10 @@ export function createLspServer(connection: Connection, options: LspServerOption
         if (fix) out.push({ title: fix.description, kind: CodeActionKind.QuickFix, diagnostics: [d], isPreferred: true, edit: editFor(ws, fix.edits) });
         const ignore = await ws.ignoreFor(path, f);
         if (ignore) out.push({ title: ignore.title, kind: CodeActionKind.QuickFix, diagnostics: [d], edit: editFor(ws, [ignore.edit]) });
+        // The false-positive issue form with this finding filled in (src/format/fp-link.ts), opened in the browser.
+        const sha = /\/blob\/([0-9a-f]{7,40})\//.exec(f.evidence?.url ?? '')?.[1];
+        const url = falsePositiveUrl({ rule: f.rule, message: f.message, path: f.path, line: f.line, repo: f.repo, sha, lineText: ws.docs.get(path)?.text.split(/\r?\n/)[f.line - 1], version: packageVersion() });
+        out.push({ title: `Staleproof: report a false positive (${f.rule})`, kind: CodeActionKind.QuickFix, diagnostics: [d], command: { title: 'Report false positive', command: COMMANDS.reportFalsePositive, arguments: [url] } });
       }
     }
     if (only?.length && wants(FIX_ALL_KIND)) {
@@ -527,6 +533,14 @@ export function createLspServer(connection: Connection, options: LspServerOption
         target = picked ? locations[items.indexOf(items.find((i) => i.title === picked.title)!)] : undefined;
       }
       if (target && caps.window?.showDocument?.support) await connection.window.showDocument({ uri: target.uri, selection: target.range, takeFocus: true });
+      return null;
+    }
+    if (params.command === COMMANDS.reportFalsePositive) {
+      const url = typeof args[0] === 'string' ? args[0] : '';
+      // Only the false-positive form: a command argument never opens any other page.
+      if (!url.startsWith(`${FP_NEW_ISSUE}?`)) return null;
+      if (caps.window?.showDocument?.support) await connection.window.showDocument({ uri: url, external: true });
+      else info(`Staleproof: report the false positive at ${url}`);
       return null;
     }
     return null;

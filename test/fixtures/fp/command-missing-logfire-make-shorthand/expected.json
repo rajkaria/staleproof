@@ -1,0 +1,27 @@
+{
+  "summary": "no finding command-missing at AGENTS.md:10",
+  "source": {
+    "repo": "pydantic/logfire",
+    "sha": "ac9722e5193160b9cc1e666721053e06c7abf0dc",
+    "urls": [
+      "https://github.com/pydantic/logfire/blob/ac9722e5193160b9cc1e666721053e06c7abf0dc/AGENTS.md#L10"
+    ]
+  },
+  "why": "`make format/lint/typecheck` is shorthand for the format, lint and typecheck targets, which all exist. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "command-missing",
+      "file": "AGENTS.md",
+      "line": 10,
+      "message": "`format/lint/typecheck` is not a target in Makefile."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "AGENTS.md",
+    "LICENSE",
+    "Makefile",
+    "pyproject.toml"
+  ],
+  "builtWith": "0.7.0"
+}

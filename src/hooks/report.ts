@@ -8,6 +8,8 @@ export interface PredictedBreak {
   example: string;
   line?: number;
   detail: string;
+  /** The static check's kind (`missing-argument`, …): a beta one blocks only when `[rules]` opts it in. */
+  kind?: string;
 }
 
 export function findingLine(f: Finding): string {

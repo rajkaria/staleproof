@@ -1,0 +1,35 @@
+{
+  "summary": "no finding link-broken at logfire-sdk/logfire/.agents/skills/logfire-setup-offline.md:133, logfire-sdk/logfire/.agents/skills/logfire-setup-offline.md:154",
+  "source": {
+    "repo": "pydantic/logfire",
+    "sha": "ac9722e5193160b9cc1e666721053e06c7abf0dc",
+    "urls": [
+      "https://github.com/pydantic/logfire/blob/ac9722e5193160b9cc1e666721053e06c7abf0dc/logfire-sdk/logfire/.agents/skills/logfire-setup-offline.md#L133",
+      "https://github.com/pydantic/logfire/blob/ac9722e5193160b9cc1e666721053e06c7abf0dc/logfire-sdk/logfire/.agents/skills/logfire-setup-offline.md#L154"
+    ]
+  },
+  "why": "A generated offline bundle whose header says \"This build omits the other `./references/...` deep-dive files\": the links are known to be left out. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "link-broken",
+      "file": "logfire-sdk/logfire/.agents/skills/logfire-setup-offline.md",
+      "line": 133,
+      "message": "The link target `logfire-sdk/logfire/.agents/skills/references/python/integrations.md` does not exist."
+    },
+    {
+      "rule": "link-broken",
+      "file": "logfire-sdk/logfire/.agents/skills/logfire-setup-offline.md",
+      "line": 154,
+      "message": "The link target `logfire-sdk/logfire/.agents/skills/references/python/logging-patterns.md` does not exist."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "Makefile",
+    "logfire-sdk/logfire/.agents/skills/logfire-setup-offline.md",
+    "logfire-sdk/pyproject.toml",
+    "pyproject.toml"
+  ],
+  "builtWith": "0.7.0"
+}

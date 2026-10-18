@@ -1,0 +1,37 @@
+{
+  "summary": "no finding path-missing at skills/AGENTS.md:70, skills/AGENTS.md:71",
+  "source": {
+    "repo": "mem0ai/mem0",
+    "sha": "0724291bd864cf807e88ee8981c8226644e8fb42",
+    "urls": [
+      "https://github.com/mem0ai/mem0/blob/0724291bd864cf807e88ee8981c8226644e8fb42/skills/AGENTS.md#L70",
+      "https://github.com/mem0ai/mem0/blob/0724291bd864cf807e88ee8981c8226644e8fb42/skills/AGENTS.md#L71"
+    ]
+  },
+  "why": "The paragraph is about the `mem0-integrate` skill and names its files relative to it: skills/mem0-integrate/references/pipeline.md and subagent-prompts.md exist. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "path-missing",
+      "file": "skills/AGENTS.md",
+      "line": 70,
+      "message": "`references/pipeline.md` does not exist; it moved to `skills/mem0-integrate/references/pipeline.md`."
+    },
+    {
+      "rule": "path-missing",
+      "file": "skills/AGENTS.md",
+      "line": 71,
+      "message": "`references/subagent-prompts.md` does not exist; it moved to `skills/mem0-integrate/references/subagent-prompts.md`."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "Makefile",
+    "docs/docs.json",
+    "pyproject.toml",
+    "skills/AGENTS.md",
+    "skills/mem0-integrate/references/pipeline.md",
+    "skills/mem0-integrate/references/subagent-prompts.md"
+  ],
+  "builtWith": "0.7.0"
+}

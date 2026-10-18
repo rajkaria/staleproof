@@ -1,0 +1,44 @@
+{
+  "summary": "no finding link-broken at docs/snippets/see_also_border.md:1, docs/snippets/see_also_border.md:2, docs/snippets/see_also_border.md:3",
+  "source": {
+    "repo": "Textualize/textual",
+    "sha": "5e5b7ef58b8c5572c13a3ff9027d756623661495",
+    "urls": [
+      "https://github.com/Textualize/textual/blob/5e5b7ef58b8c5572c13a3ff9027d756623661495/docs/snippets/see_also_border.md#L1",
+      "https://github.com/Textualize/textual/blob/5e5b7ef58b8c5572c13a3ff9027d756623661495/docs/snippets/see_also_border.md#L2",
+      "https://github.com/Textualize/textual/blob/5e5b7ef58b8c5572c13a3ff9027d756623661495/docs/snippets/see_also_border.md#L3"
+    ]
+  },
+  "why": "A snippet included with --8<-- into pages under docs/styles/, so ./border_title_align.md resolves from there (docs/styles/border_title_align.md exists). Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "link-broken",
+      "file": "docs/snippets/see_also_border.md",
+      "line": 1,
+      "message": "The link target `docs/snippets/border_title_align.md` does not exist."
+    },
+    {
+      "rule": "link-broken",
+      "file": "docs/snippets/see_also_border.md",
+      "line": 2,
+      "message": "The link target `docs/snippets/border_subtitle_color.md` does not exist."
+    },
+    {
+      "rule": "link-broken",
+      "file": "docs/snippets/see_also_border.md",
+      "line": 3,
+      "message": "The link target `docs/snippets/border_subtitle_background.md` does not exist."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "Makefile",
+    "docs/snippets/see_also_border.md",
+    "docs/styles/border_subtitle_background.md",
+    "docs/styles/border_subtitle_color.md",
+    "docs/styles/border_title_align.md",
+    "pyproject.toml"
+  ],
+  "builtWith": "0.7.0"
+}

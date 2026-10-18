@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { z } from 'zod';
 import * as Q from '../graph/queries.js';
+import { ruleSettingsOf } from '../graph/rule-settings.js';
+import { exampleKindCounts } from '../lint/maturity.js';
 import { ingestPullRequest } from '../pr/ingest.js';
 import { knownMismatches, predictBreaks, type CodeAfter, type KnownMismatch, type PredictedBreak } from '../pr/predict.js';
 import { exampleAtCommit, loadExample } from '../runner/index.js';
@@ -81,11 +83,18 @@ export interface ImpactData {
 
 export const MAX_SECTIONS = 40;
 
-function predictedSentence(predicted: PredictedBreak[]): string {
-  const examples = [...new Set(predicted.map((p) => p.example.split(':').slice(1).join(':')))];
-  if (!examples.length) return '';
+/**
+ * The summary's sentence about predicted breaks, counting what the report's title counts: a beta example check's
+ * prediction (src/lint/maturity.ts) only when its repository opts the rule in; the others are named as lower confidence.
+ */
+function predictedSentence(predicted: PredictedBreak[], counts: (p: PredictedBreak) => boolean): string {
+  const examplesOf = (list: PredictedBreak[]) => [...new Set(list.map((p) => p.example.split(':').slice(1).join(':')))];
+  const examples = examplesOf(predicted.filter(counts));
+  const beta = examplesOf(predicted.filter((p) => !counts(p))).filter((e) => !examples.includes(e)).length;
+  if (!examples.length) return beta ? ` No example is predicted to break (${beta} from beta checks, lower confidence).` : '';
   const n = examples.length;
-  return ` ${n} example${n === 1 ? ' is' : 's are'} predicted to break, the call no longer fitting the changed code (${examples.slice(0, 3).join(', ')}${n > 3 ? ', …' : ''}).`;
+  const more = beta ? ` (${beta} more from beta checks, lower confidence)` : '';
+  return ` ${n} example${n === 1 ? ' is' : 's are'} predicted to break (${examples.slice(0, 3).join(', ')}${n > 3 ? ', …' : ''}), the call no longer fitting the changed code${more}.`;
 }
 
 /** Ingest the PR once per check (idempotent anyway) and return its change set. */
@@ -213,6 +222,9 @@ export const impactTool: ToolDef<{ pr_url: string; max_hops?: number; offset?: n
       mismatched,
     };
     const crossRepo = sections.filter((s) => s.crossRepo).length;
+    // As the report counts them: each docs repository's [rules] as indexed (src/graph/rule-settings.ts).
+    const ruleSettings = predicted.length ? await ruleSettingsOf(tracer.graph, [...new Set(predicted.map((p) => p.repo))]) : new Map();
+    const counted = (p: PredictedBreak) => exampleKindCounts(p.kind, ruleSettings.get(p.repo));
     // Added symbols can't make an existing doc false; count them apart.
     const added = changes.rows.filter((c) => c.change === 'added').length;
     const changedCount = changes.rows.length - added;
@@ -221,7 +233,7 @@ export const impactTool: ToolDef<{ pr_url: string; max_hops?: number; offset?: n
         ? `${url} changed no Python, TypeScript or JavaScript symbols in ${pr.repo}; no docs can be falsified through code.`
         : `${changedCount} changed symbol${changedCount === 1 ? '' : 's'}${added ? ` (and ${added} added)` : ''} reach${changedCount === 1 ? 'es' : ''} ${sections.length} doc section${sections.length === 1 ? '' : 's'} ` +
           `(${counts.breaking} breaking, ${counts.api} signature, ${counts.behavior} behavior; ${crossRepo} in other repositories).` +
-          predictedSentence(predicted) +
+          predictedSentence(predicted, counted) +
           (mismatched.length ? ` ${new Set(mismatched.map((m) => m.example)).size} impacted example(s) already did not fit the code before this pull request.` : '') +
           (sections.length > MAX_SECTIONS || offset > 0
             ? ` Showing ${page.length ? `${offset + 1}–${offset + page.length}` : 'none'} of ${sections.length}` +

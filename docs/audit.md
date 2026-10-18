@@ -68,14 +68,14 @@ The score starts at 100 and loses points for four things:
 
 | Deduction | Points | Cap |
 |---|---|---|
-| Each example with at least one line that no longer fits the code | 8 | 50 |
+| Each example with at least one line that no longer fits the code (a stable check's, or a beta check the repository opts in) | 8 | 50 |
 | Each other example that fails when run (`fail` or `timeout`; examples already counted as mismatched are not counted twice) | 6 | 30 |
 | **Docs references**: each error-level finding in the docs, READMEs and AI agent files (a missing path, a broken link, an undefined command); each warning (a missing anchor, a line past the end of a file) costs 1; info findings (an env var the env file does not list) cost nothing | 3 | 25 |
 | Each percent of public API that no doc names or calls | 0.3, rounded | none |
 
-The score never goes below 0. The grade is `A` from 90, `B` from 80, `C` from 70, `D` from 60, else `F`. Each deduction is listed in the report with its reason.
+The score never goes below 0. The grade is `A` from 90, `B` from 80, `C` from 70, `D` from 60, else `F`. Each deduction is listed in the report with its reason. Beta rules' findings and example lines (the **Maturity** column of the [rules reference](rules.md)) are listed apart, under "Lower confidence", and never deducted, unless the repository opts the rule in at `warning` or `error` in `[rules]` ([Configuration](configuration.md#repository-configuration)): then they count like any other. The setting is read when the repository is indexed.
 
-For example, auditing the fixture repository `acme/mini-client` from the test suite: 2 examples call it in ways it no longer accepts (−16), and 4 of its 11 public symbols are named or called by no doc, 63.6% coverage (−11, from 36.4 × 0.3). The score is 73, grade C. A repository whose agent file names a moved file and whose README runs a renamed script loses 6 more: `Docs references: 2 errors where the docs or AI agent files name a path, link, command or setting the repository does not have (3 per error, 1 per warning, at most 25)`.
+For example, auditing the fixture repository `acme/mini-client` from the test suite: 4 of its 11 public symbols are named or called by no doc, 63.6% coverage (−11, from 36.4 × 0.3). Its 4 example lines that no longer fit the code, in 2 examples, come from beta checks, so they are listed and cost nothing. The score is 89, grade B. With `[rules] "example-unknown-keyword" = "warning"` in the docs repository, the 2 examples with an unknown keyword would count (−16). A repository whose agent file names a moved file and whose README runs a renamed script loses 6 more: `Docs references: 2 errors where the docs or AI agent files name a path, link, command or setting the repository does not have (3 per error, 1 per warning, at most 25)`.
 
 The "Docs references" deduction arrived with Staleproof 0.5 (index version 4): a score computed before it can be up to 25 points higher for the same repository.
 
@@ -109,24 +109,27 @@ The [global options](cli.md#global-options) apply: without `--org`, the graph is
 **Prints, text.** From the fixture `acme/mini-client` (colours off):
 
 ```text
-Docs health 73/100 (C)
+Docs health 89/100 (B)
 acme/mini-client@a6214ef
 
-Docs health 73/100 (C) for acme/mini-client. 2 of 5 examples that call the code no longer fit it (4 lines). 7 of 11 public symbols (63.6%) are named or called by a doc.
+Docs health 89/100 (B) for acme/mini-client. No example that calls the code is known not to fit it (5 checked); 4 lines from beta checks are listed apart, not counted. 7 of 11 public symbols (63.6%) are named or called by a doc.
 
 Score
-  -16 2 examples call the code in a way it no longer accepts (8 each, at most 50)
   -11 4 of 11 public symbols are named or called by no doc (0.3 per missing percent)
 
-Examples that no longer fit the code (2 examples, 4 lines)
-  ✗ docs/stale.md:0 line 8 · acme/stale-docs
+Examples that no longer fit the code (0 examples, 0 lines)
+  none found by the stable checks
+  Lower confidence (beta rules)
+    Shown for review: these rules are still earning trust, so their findings never fail a check or lower the score. Opt a rule in with `[rules] "<id>" = "warning"` in .staleproof.toml.
+  ? docs/stale.md:0 line 8 · acme/stale-docs
     `miniclient` has no `connect` (imports a name that does not exist; miniclient.connect)
-  ✗ docs/stale.md:0 line 10 · acme/stale-docs
+  ? docs/stale.md:0 line 10 · acme/stale-docs
     `Client` has no parameter `hostname` (unknown keyword argument; Client)
-  ✗ docs/stale.md:1 line 19 · acme/stale-docs
+  ? docs/stale.md:1 line 19 · acme/stale-docs
     `Graph.query` takes at most 2 positional arguments; the example passes 3 (too many positional arguments; g.query)
-  ✗ docs/stale.md:1 line 20 · acme/stale-docs
+  ? docs/stale.md:1 line 20 · acme/stale-docs
     `Graph` has no attribute `read_only` (calls an attribute that does not exist; g.read_only)
+  False positive? Report it: https://github.com/rajkaria/staleproof/issues/new?template=false-positive.yml
 
 API coverage: 7 of 11 public symbols (63.6%) named or called by a doc
   Undocumented, most used first:
@@ -138,20 +141,20 @@ API coverage: 7 of 11 public symbols (63.6%) named or called by a doc
 Badge: [![docs health](https://staleproof.dev/api/badge/acme/mini-client.svg)](https://staleproof.dev/#/audit?repo=acme%2Fmini-client)
 ```
 
-The mismatched examples live in another repository (`acme/stale-docs`) and call `acme/mini-client`'s code, so they count for it. When the repository's docs references were checked, a section `Docs references that no longer match the repository (<n>: <errors>, <warnings>)` comes before the examples (see [Docs references](#docs-references)), or one line saying all of them match; the summary gains `<n> docs references in <f> files no longer match the repository (<a> in AI agent instructions).` When runs are recorded, a section `Example runs at the indexed commits (<p> pass, <f> fail, <s> skipped, <e> not installed)` lists the failing ones. The badge line appears when one repository is audited. When a summary sentence `Indexed by an older Staleproof: …` appears, see [Limits](#limits).
+The mismatched examples live in another repository (`acme/stale-docs`) and call `acme/mini-client`'s code, so they are reported for it (and counted when `acme/stale-docs` opts their rules in). When the repository's docs references were checked, a section `Docs references that no longer match the repository (<n>: <errors>, <warnings>)` comes before the examples (see [Docs references](#docs-references)), or one line saying all of them match; the summary gains `<n> docs references in <f> files no longer match the repository (<a> in AI agent instructions).` When runs are recorded, a section `Example runs at the indexed commits (<p> pass, <f> fail, <s> skipped, <e> not installed)` lists the failing ones. The badge line appears when one repository is audited. When a summary sentence `Indexed by an older Staleproof: …` appears, see [Limits](#limits).
 
 **Prints, Markdown.** The same content as tables: the deductions, the docs references (one table per surface, AI agent instructions first, each row linked to the line: `| [AGENTS.md:5](…#L5) | `lint:docs` is not a script in package.json. | command-missing |`; the first 100, the JSON has all), the mismatched lines with links to the exact doc line (`| [docs/stale.md:1 line 20](…#L20) | Upgrading guide > Query | `g.read_only` | `Graph` has no attribute `read_only` |`), the failing runs, coverage with the undocumented symbols in a collapsed `<details>` block, the badge, a footer with the graph and commits, and two last lines the GitHub Action reads:
 
 ```text
 <!-- staleproof:audit-findings findings=3 errors=3 warnings=0 -->
-<!-- staleproof:audit score=73 mismatched=2 failing=0 coverage=63.6 -->
+<!-- staleproof:audit score=89 mismatched=0 failing=0 coverage=63.6 -->
 ```
 
 The `audit-findings` line appears from Staleproof 0.5 on; the `audit` line keeps its shape.
 
 The first line is the marker `<!-- staleproof-audit -->`, which the Action uses to find its issue.
 
-**JSON.** `{summary, org, repos: [{name, sha, symbols, sections, indexVersion, findingsChecked}], outdatedIndex, score, grade, deductions: [{points, why}], examples: {total, python, linked, mismatched}, mismatches: [{example, url, repo, path, heading, line, kind, detail, call, symbol}], coverage: {api, documented, percent}, undocumented: [{qualname, repo, kind, signature, url, callers, crossRepoCallers}], runs: [{example, url, status, error, reason}], runCounts: {pass, fail, skipped, error}, findings: [Finding & {heading}], findingCounts: {errors, warnings, infos, byRule, bySurface}, generatedAt}`. Each finding has the [lint JSON shape](lint.md#json-output) (`rule`, `severity`, `message`, `repo`, `path`, `line`, `column`, `endLine`, `endColumn`, `surface`, `subject`, `evidence`, `fix`, `fingerprint`) plus the `heading` of its doc section when it is in one; `findings` lists AI agent instruction files first. `findingsChecked` is false for a repository indexed before index version 4 or from a partial file list; the new fields are additive. `examples.linked` counts the examples that call at least one indexed symbol; `examples.mismatched` the ones with at least one `MISMATCH` line.
+**JSON.** `{summary, org, repos: [{name, sha, symbols, sections, indexVersion, findingsChecked}], outdatedIndex, score, grade, deductions: [{points, why}], examples: {total, python, linked, mismatched}, mismatches: [{example, url, repo, path, heading, line, kind, detail, call, symbol, lowerConfidence?}], coverage: {api, documented, percent}, undocumented: [{qualname, repo, kind, signature, url, callers, crossRepoCallers}], runs: [{example, url, status, error, reason}], runCounts: {pass, fail, skipped, error}, findings: [Finding & {heading}], findingCounts: {errors, warnings, infos, byRule, bySurface, lowerConfidence?}, generatedAt}`. Each finding has the [lint JSON shape](lint.md#json-output) (`rule`, `severity`, `message`, `repo`, `path`, `line`, `column`, `endLine`, `endColumn`, `surface`, `subject`, `evidence`, `fix`, `fingerprint`) plus the `heading` of its doc section when it is in one; `findings` lists AI agent instruction files first. `findingsChecked` is false for a repository indexed before index version 4 or from a partial file list; the new fields are additive. `examples.linked` counts the examples that call at least one indexed symbol; `examples.mismatched` the ones with at least one counted `MISMATCH` line; `lowerConfidence: true` marks a beta check's line or finding (listed, never counted).
 
 ## On the web
 

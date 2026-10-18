@@ -133,7 +133,7 @@ repos:
 
 Then `pre-commit install`.
 
-- **What it does.** On `git commit`, it lints what the commit contains (the git index) against `HEAD` and fails when the staged changes make a docs reference wrong: a renamed script the README still runs, a moved file `AGENTS.md` still names. An optional `staleproof-predicted` hook on `git push` fails when a docs example is predicted to break.
+- **What it does.** On `git commit`, it lints what the commit contains (the git index) against `HEAD` and fails when the staged changes make a docs reference wrong: a renamed script the README still runs, a link `AGENTS.md` still follows to a page that moved. An optional `staleproof-predicted` hook on `git push` fails when a docs example is predicted to break.
 - **What it does not do.** It reads only the local clone; nothing is fetched or sent.
 
 lefthook, husky, a plain git hook and why the hooks run the published package: [Pre-commit hooks](pre-commit.md).

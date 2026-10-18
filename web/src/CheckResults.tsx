@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { falsePositiveUrl } from '../../src/format/fp-link';
 import { api } from './api';
 import { PACKAGE } from './docs/manifest';
 import { ClearedList, SectionCard, TraceList, type PackageRepo } from './components';
@@ -18,6 +19,9 @@ export interface WebFinding {
   fingerprint: string;
   evidence?: { looked: string; url?: string };
   fix?: { description: string; verified: boolean };
+  repo?: string;
+  /** From a beta rule (src/lint/maturity.ts): shown apart, never fails a check. */
+  lowerConfidence?: boolean;
 }
 
 /** "Docs this pull request makes wrong" (src/agent/graph-check.ts `PrFindings`), carried on the impact step. */
@@ -39,11 +43,21 @@ export const SURFACE_TITLE: Record<WebFinding['surface'], string> = {
   config: 'Configuration',
 };
 
-/** Findings under their surface title, in the order given (AI agent instructions first). */
+export const LOWER_CONFIDENCE_TITLE = 'Lower confidence (beta rules)';
+
+/** Findings under their surface title, in the order given (AI agent instructions first); beta rules' findings last. */
 export function findingGroups<F extends WebFinding>(findings: F[]): [string, F[]][] {
   const out = new Map<string, F[]>();
-  for (const f of findings) out.set(SURFACE_TITLE[f.surface] ?? f.surface, [...(out.get(SURFACE_TITLE[f.surface] ?? f.surface) ?? []), f]);
+  const lower = findings.filter((f) => f.lowerConfidence);
+  for (const f of findings.filter((x) => !x.lowerConfidence)) out.set(SURFACE_TITLE[f.surface] ?? f.surface, [...(out.get(SURFACE_TITLE[f.surface] ?? f.surface) ?? []), f]);
+  if (lower.length) out.set(LOWER_CONFIDENCE_TITLE, lower);
   return [...out];
+}
+
+/** The prefilled false-positive report of a finding (src/format/fp-link.ts). */
+export function reportUrl(f: WebFinding, repo?: string): string {
+  const sha = /\/blob\/([0-9a-f]{7,40})\//.exec(f.evidence?.url ?? '')?.[1];
+  return falsePositiveUrl({ rule: f.rule, message: f.message, path: f.path, line: f.line, repo: f.repo ?? repo, sha });
 }
 
 /**
@@ -191,7 +205,10 @@ function NewFindingsList({ nf }: { nf: PrFindingsView }) {
                   </code>
                 )}
                 <span className="predicted-why">
-                  {f.message} <span className="muted">({f.rule})</span>
+                  {f.message} <span className="muted">({f.rule})</span>{' '}
+                  <a className="fp-link muted small" href={reportUrl(f)} target="_blank" rel="noreferrer" title="Report a false positive: opens a prefilled GitHub issue">
+                    False positive?
+                  </a>
                   {f.fix?.verified && <span> Fix: {f.fix.description}</span>}
                 </span>
               </li>

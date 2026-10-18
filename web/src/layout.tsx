@@ -176,6 +176,7 @@ export function CodeBlock({ code, lang, title }: { code: string; lang?: string; 
 export const NAV: { href: string; label: string }[] = [
   { href: '#/install', label: 'Install' },
   { href: '#/audit', label: 'Audit' },
+  { href: '#/drift', label: 'Drift Hall' },
   { href: '#/how-it-works', label: 'How it works' },
   { href: '#/use-cases', label: 'Use cases' },
   { href: '#/integrations', label: 'Integrations' },

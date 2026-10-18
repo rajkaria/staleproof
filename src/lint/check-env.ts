@@ -55,6 +55,26 @@ export interface EnvCheckInput {
   undocumented: boolean;
 }
 
+/**
+ * The claim is a step in another repository's checkout: the lines above it in its section tell the reader to
+ * clone, `cd` into or work inside `owner/name`, which is not this repository (nor a fork of it) nor a folder of it.
+ * zustand's CONTRIBUTING.md: "Separately, clone the `pmndrs/docs` … Inside the `pmndrs/docs` directory: create a
+ * `.env` file … `MDX=…`": pmndrs/docs reads those variables.
+ */
+export function inOtherCheckout(lines: readonly string[], line: number, repo: string | undefined, paths: ReadonlySet<string>): boolean {
+  const own = repo?.split('/').pop()?.toLowerCase();
+  const inRepo = (p: string) => paths.has(p) || [...paths].some((x) => x.startsWith(`${p}/`));
+  for (let i = line - 1; i >= 0; i--) {
+    const text = lines[i] ?? '';
+    if (i < line - 1 && /^\s{0,3}#{1,6}\s/.test(text)) break;
+    for (const m of text.matchAll(/\b(?:clone|inside|into|cd|within)\b[^.\n]*?`?(?:https:\/\/github\.com\/)?([\w.-]+)\/([\w.-]+?)(?:\.git)?`?(?=[\s.,):]|$)/gi)) {
+      const name = m[2]!.toLowerCase();
+      if (name !== own && !inRepo(`${m[1]}/${m[2]}`)) return true;
+    }
+  }
+  return false;
+}
+
 interface Located {
   claim: EnvClaim;
   page: CheckedPage;
@@ -235,8 +255,10 @@ export async function checkEnv(o: EnvCheckInput): Promise<PageFinding[]> {
     // Code that reads a name it computes could read any documented name: judge none.
     if (!opaque) {
       const seen = new Set<string>();
+      const pathSet = new Set(o.paths);
       for (const { claim, page } of eligible) {
         if (!pending.has(claim.name)) continue;
+        if (claim.how !== 'env-file' && inOtherCheckout(page.doc.lines, claim.span.line, o.repo, pathSet)) continue;
         const key = `${page.target.path}\0${claim.name}`;
         if (seen.has(key)) continue;
         seen.add(key);

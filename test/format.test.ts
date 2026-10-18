@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { checkMarkdown } from '../src/format/markdown.js';
+import { checkMarkdown, newFindingsMarkdown } from '../src/format/markdown.js';
+import { FP_LINKS_BUDGET, FP_LINKS_MAX } from '../src/lint/format.js';
+import type { Finding, LintSummary } from '../src/lint/types.js';
 import type { ImpactData } from '../src/tools/graph-tools.js';
 
 const impact: ImpactData = {
@@ -123,5 +125,65 @@ describe('checkMarkdown', () => {
     // Sections and runs only on pages the pull request does not edit: nothing to say about its edits.
     const elsewhere = checkMarkdown({ impact: { ...impact, pr: { ...edits, docsTouched: ['other.md'] } }, summary: 's', cleared: [], runs: [passes], org: 'acme' });
     expect(elsewhere).not.toContain('also edits');
+  });
+});
+
+describe('newFindingsMarkdown', () => {
+  const sha = 'b'.repeat(40);
+  const finding: Finding = {
+    rule: 'path-missing',
+    severity: 'error',
+    message: 'The file `docs/setup.md` does not exist.',
+    repo: 'acme/app',
+    path: 'AGENTS.md',
+    line: 6,
+    column: 23,
+    endLine: 6,
+    endColumn: 36,
+    surface: 'agent',
+    subject: 'docs/setup.md',
+    evidence: { looked: 'files', url: `https://github.com/acme/app/blob/${sha}/AGENTS.md#L6` },
+    fingerprint: 'f1',
+  };
+  const summary: LintSummary = { errors: 1, warnings: 0, infos: 0, files: 3, byRule: { 'path-missing': 1 }, bySurface: { agent: 1 }, ms: 1 };
+
+  it('links each finding to the false-positive form, and shares nothing of a private repository', () => {
+    const pf = { repo: 'acme/app', base: 'a'.repeat(40), head: sha, total: 1, fixed: 0, files: 3, ms: 1, findings: [finding], summary };
+    expect(newFindingsMarkdown(pf)).toContain('[False positive?](https://github.com/rajkaria/staleproof/issues/new?template=false-positive.yml&');
+    const priv = decodeURIComponent(newFindingsMarkdown(pf, 'this pull request', { private: true }));
+    expect(priv).toContain('private repository (not shared)');
+    expect(priv).not.toContain(`location=${finding.path}`);
+  });
+
+  it('a long comment: per-finding links on the first 20 findings, then one report line; the links never push it past GitHub\'s 65,536', () => {
+    // 50 findings (the most a stored check keeps), each with a long message (about 300 characters).
+    const many = Array.from({ length: 50 }, (_, i): Finding => ({
+      ...finding,
+      path: `docs/page-${i}.md`,
+      line: i + 1,
+      message: `The file \`docs/a-much-longer-path-${i}/${'nested/'.repeat(10)}setup.md\` does not exist; ${'it moved more than once, and the docs still name the old place. '.repeat(3)}`,
+      evidence: { looked: 'files', url: `https://github.com/acme/app/blob/${sha}/docs/page-${i}.md#L${i + 1}` },
+      fingerprint: `f${i}`,
+    }));
+    const pf = { repo: 'acme/app', base: 'a'.repeat(40), head: sha, total: 50, fixed: 0, files: 60, ms: 1, findings: many, summary: { ...summary, errors: 50 } };
+    const md = newFindingsMarkdown(pf);
+    const links = [...md.matchAll(/\[False positive\?\]\((https:[^)\s]+)\)/g)].map((m) => m[1]!);
+    expect(FP_LINKS_MAX).toBe(20);
+    expect(links).toHaveLength(20);
+    // The first 20 findings in the order shown, and nothing after them.
+    expect(links.map((u) => new URL(u).searchParams.get('location'))).toEqual(many.slice(0, 20).map((f) => `${f.path}:${f.line}`));
+    expect(md.trimEnd().endsWith('<sub>False positive? [Report it](https://github.com/rajkaria/staleproof/issues/new?template=false-positive.yml).</sub>')).toBe(true);
+    expect(md.match(/False positive\? \[Report it\]/g)).toHaveLength(1);
+    expect(links.join('').length).toBeLessThanOrEqual(FP_LINKS_BUDGET);
+    expect(md.length).toBeLessThan(65_536);
+    // Worst case: links near the URL cap (a long path, a message of characters that encode to 9 each). The budget bounds what they add.
+    const huge = many.map((f, i) => ({ ...f, path: `docs/${'deep/'.repeat(20)}page-${i}.md`, message: '中'.repeat(5000) }));
+    const big = newFindingsMarkdown({ ...pf, findings: huge });
+    const bigLinks = [...big.matchAll(/\[False positive\?\]\((https:[^)\s]+)\)/g)].map((m) => m[1]!);
+    expect(bigLinks.length).toBeLessThan(20);
+    expect(bigLinks.join('').length).toBeLessThanOrEqual(FP_LINKS_BUDGET);
+    expect(big).toContain('False positive? [Report it]');
+    // A short list keeps a link on every finding and no extra line.
+    expect(newFindingsMarkdown({ ...pf, total: 3, findings: many.slice(0, 3) })).not.toContain('False positive? [Report it]');
   });
 });

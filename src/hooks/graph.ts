@@ -46,7 +46,7 @@ export async function predictedFromLocalGraph(root: string, opts: { timeoutMs?: 
     const org = orgSlug(setting('ORG') ?? local.repo.split('/')[0]!);
     store = await GraphStore.connect(config.falkordbUrl);
     const r = await analyzeChanges(store.org(org), config.home, local.repo, local.diff, { url: '', title: 'working tree' });
-    return r.data.impact.predicted.map((p) => ({ example: p.repo === local.repo ? p.path : `${p.repo}:${p.path}`, line: p.line, detail: p.detail }));
+    return r.data.impact.predicted.map((p) => ({ example: p.repo === local.repo ? p.path : `${p.repo}:${p.path}`, line: p.line, detail: p.detail, kind: p.kind }));
   } catch {
     // Not indexed, or the graph is busy: the lint findings stand on their own.
     return [];

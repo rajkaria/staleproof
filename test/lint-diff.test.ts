@@ -95,7 +95,8 @@ describe('lint --new (git sources)', () => {
       expect(r.findings[0]!.message).toBe('`docs/setup.md` does not exist; it moved to `docs/guides/setup.md`.');
       // The old broken link was already there on main: not new.
       expect(r.findings.some((f) => f.subject === 'docs/gone.md')).toBe(false);
-      expect(r.summary).toMatchObject({ errors: 2, warnings: 0 });
+      // path-missing is beta (src/lint/maturity.ts): new, listed, at info.
+      expect(r.summary).toMatchObject({ errors: 1, warnings: 0, infos: 1, lowerConfidence: 1 });
       // An explicit base gives the same answer; comparing with the branch itself gives none.
       expect((await lintNew({ dir, repo: 'acme/app', base: 'main', examples: false })).findings).toHaveLength(2);
       expect((await lintNew({ dir, repo: 'acme/app', base: 'HEAD', examples: false })).findings).toEqual([]);

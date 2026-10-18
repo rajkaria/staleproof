@@ -121,4 +121,10 @@ describe('routes', () => {
     expect(parseRoute('#/audit')).toEqual({ page: 'audit', repo: undefined });
     expect(parseRoute('#/nowhere')).toEqual({ page: 'home' });
   });
+
+  it('routes #/drift to the Drift Hall', () => {
+    expect(parseRoute('#/drift')).toEqual({ page: 'drift' });
+    expect(parseRoute('#/drift-hall')).toEqual({ page: 'drift' });
+    expect(parseRoute('#/drift/')).toEqual({ page: 'drift' });
+  });
 });

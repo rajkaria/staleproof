@@ -4,6 +4,7 @@ import { outsideFixesMarkdown, suggestFixes } from '../pr/suggest.js';
 import type { PrChecker } from './checker.js';
 import { annotationsOf, APP_COMMENT_MARKER, APPLY_FIXES, CHECK_NAME, checkTitle, chunks, conclusionOf, planComment, resolveAppConfig, truncate, type CheckOutcome, type ResolvedAppConfig } from './checks.js';
 import { fixesPatch, readFixedFiles } from './commit-fixes.js';
+import { decideExamples, runExamplesCheck, supersedeExamples, type ExamplesDecision, type ExamplesSetup, type ExamplesSummary } from './examples.js';
 import type { GitHubAppClient, InstallationClient } from './github-app.js';
 import { isFork, pullRequestInfo, type GhPull } from './payloads.js';
 import type { AppRegistry } from './registry.js';
@@ -27,6 +28,10 @@ export interface PrCheckContext {
   botLogin?: string;
   suggest?: SuggestFn;
   log: (msg: string) => void;
+  /** Running the affected examples in a sandbox after the check run (src/app/examples.ts); absent: never. */
+  examples?: ExamplesSetup;
+  /** Keeps the examples phase alive after the webhook answered (`waitUntil` on Vercel). */
+  waitUntil?: (p: Promise<unknown>) => void;
 }
 
 export interface PrTarget {
@@ -44,6 +49,10 @@ export interface PrCheckSummary {
   comment?: 'created' | 'updated' | 'all-clear' | 'none';
   suggestions?: number;
   error?: string;
+  /** The examples phase: started in the background, or why not. */
+  examples?: 'running' | 'not-run';
+  /** Settles when the examples check run is complete (tests). */
+  examplesDone?: Promise<ExamplesSummary>;
 }
 
 interface GhIssueComment {
@@ -83,6 +92,7 @@ export function checkPullRequest(ctx: PrCheckContext, t: PrTarget): Promise<PrCh
 }
 
 async function runCheck(ctx: PrCheckContext, t: PrTarget): Promise<PrCheckSummary> {
+  const startedAt = Date.now();
   const repo = t.repo.fullName;
   const client = ctx.app.installation(t.installationId);
   if (t.pull.state !== 'open') return { skipped: 'the pull request is closed' };
@@ -95,6 +105,8 @@ async function runCheck(ctx: PrCheckContext, t: PrTarget): Promise<PrCheckSummar
   if (t.pull.draft && !cfg.drafts) return { skipped: 'draft pull request ([app] drafts = false)' };
 
   const headSha = t.pull.head.sha;
+  // A newer head is being checked: the older head's examples stop (their sandbox is destroyed).
+  supersedeExamples(`${repo.toLowerCase()}#${t.pull.number}`);
   const run = await client.post<{ id: number }>(`/repos/${repo}/check-runs`, {
     name: CHECK_NAME,
     head_sha: headSha,
@@ -145,9 +157,17 @@ async function runCheck(ctx: PrCheckContext, t: PrTarget): Promise<PrCheckSummar
     }
   }
   const conclusion = conclusionOf(outcome, cfg.failOn);
+  // The affected examples: run next in a sandbox, or the check run says where they run.
+  let examples: ExamplesDecision = { run: false, why: 'none', reason: 'no affected example' };
+  try {
+    examples = await decideExamples(ctx.examples, cfg, outcome.examples, ctx.registry, startedAt);
+    if (!examples.run && examples.why !== 'none') ctx.log(`${repo}#${t.pull.number}: examples not run: ${examples.reason}`);
+  } catch (err) {
+    ctx.log(`${repo}#${t.pull.number}: examples not run: ${(err as Error).message}`);
+  }
   let summary: string;
   try {
-    summary = await completeCheckRun(client, repo, run.id, outcome, { conclusion, verified, fork, patchText });
+    summary = await completeCheckRun(client, repo, run.id, outcome, { conclusion, verified, fork, patchText, ...(examples.note ? { note: examples.note } : {}) });
   } catch (err) {
     // Never leave the run in progress: complete it plainly (the comment still carries the report).
     summary = `the full output was refused: ${(err as Error).message}`;
@@ -190,7 +210,37 @@ async function runCheck(ctx: PrCheckContext, t: PrTarget): Promise<PrCheckSummar
     ctx.log(`${repo}#${t.pull.number}: comment not posted: ${(err as Error).message}`);
   }
   ctx.log(`${repo}#${t.pull.number}: ${conclusion} (${summary}); comment ${comment}; ${suggestions} suggestion(s)`);
-  return { checkRunId: run.id, conclusion, comment, suggestions };
+  const done: PrCheckSummary = { checkRunId: run.id, conclusion, comment, suggestions };
+  if (examples.run && outcome.examples) {
+    // The second phase, after the webhook answered: the check run above is already final.
+    const phase = runExamplesCheck({
+      client,
+      repo,
+      number: t.pull.number,
+      headSha,
+      cfg,
+      plan: outcome.examples,
+      outcome,
+      decision: examples,
+      ...(ctx.examples?.vcpus ? { vcpus: ctx.examples.vcpus } : {}),
+      commentBody: (report) => commentBody(report, outside, fork, patchText !== ''),
+      keepComment: (o, body) => keepComment(ctx, client, t, cfg, o, body),
+      log: ctx.log,
+    }).catch((err: Error) => {
+      ctx.log(`${repo}#${t.pull.number}: examples phase failed: ${err.message}`);
+      return { results: [], error: err.message } as ExamplesSummary;
+    });
+    (ctx.waitUntil ?? ((p: Promise<unknown>) => void p))(phase);
+    return { ...done, examples: 'running', examplesDone: phase };
+  }
+  return { ...done, ...(!examples.run && examples.why !== 'none' ? { examples: 'not-run' as const } : {}) };
+}
+
+/** A line added to a report above its footer (the counts comments stay last). */
+export function withNote(report: string, note: string | undefined): string {
+  if (!note) return report;
+  const footer = report.lastIndexOf('\n<sub>');
+  return footer >= 0 ? `${report.slice(0, footer)}\n\n${note}\n${report.slice(footer)}` : `${report}\n\n${note}`;
 }
 
 /** The report, plus what to do about fixes the suggestions could not carry. */
@@ -213,10 +263,10 @@ async function completeCheckRun(
   repo: string,
   id: number,
   outcome: CheckOutcome,
-  opts: { conclusion: string; verified: Finding[]; fork: boolean; patchText: string },
+  opts: { conclusion: string; verified: Finding[]; fork: boolean; patchText: string; /** About the examples (src/app/examples.ts). */ note?: string },
 ): Promise<string> {
   const title = checkTitle(outcome);
-  const summary = truncate(outcome.report);
+  const summary = truncate(withNote(outcome.report, opts.note));
   const annotations = annotationsOf(outcome.newFindings?.findings ?? []);
   const batches = chunks(annotations);
   // Every batch but the last while in progress; the last with the conclusion.

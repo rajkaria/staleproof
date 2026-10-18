@@ -22,7 +22,7 @@ The README's "Asynchronous Example" failed before falkordb-py#262 with `TypeErro
 | `--fresh` | off | Re-run even if an identical run is recorded, and replace the recorded one |
 | `--json` | off | Print the tool result as JSON |
 
-The agent and MCP clients run examples with the [`run_example`](tools.md) tool; graph mode, and so the GitHub Action, runs up to 3 of them per check. The hosted service runs none.
+The agent and MCP clients run examples with the [`run_example`](tools.md) tool; graph mode, and so the GitHub Action, runs up to 3 of them per check. The hosted service runs none; the [GitHub App](github-app.md#examples-in-a-sandbox) can run them in a Vercel Sandbox when its server has that switched on (staleproof.dev turns it on after its end-to-end run).
 
 ## How a run works
 
@@ -207,6 +207,22 @@ The program runs as `node --require ./_shim.cjs [--import <tsx loader>] example.
 - **TypeScript**: through tsx's ESM loader, which strips the types without checking them, so a type error in an example does not fail a run (the [static checks](indexing.md#static-checks-of-examples) catch argument counts).
 - **Result**: exit code 0 is `pass`. Otherwise `error` is the first `<Name>Error: …` line Node printed for the uncaught error (`TypeError: g.roQuery is not a function`, `SyntaxError: The requested module '@acme/hello' does not provide an export named 'greet'`), and `traceback` is the rest of its output, with the working directory written as `./`.
 
+## In a Vercel Sandbox (the GitHub App)
+
+The GitHub App runs on a serverless function, which has no git, uv or Python. When its server has example runs switched on (`STALEPROOF_APP_RUN_EXAMPLES=on`; staleproof.dev turns it on after its end-to-end run), it runs the same examples in a [Vercel Sandbox](https://vercel.com/docs/sandbox) ([src/runner/vercel-sandbox.ts](../src/runner/vercel-sandbox.ts)), with the same program, run key, statuses, fragment rule and `Run` node as here, so a run recorded by either answers the other. What differs:
+
+| | This runner (CLI, Action) | Vercel Sandbox (the App) |
+|---|---|---|
+| Where | This host, one run at a time | One microVM per check, deleted afterwards |
+| Sources | `git archive` from the local clone | The commit's archive, read by the server (the installation token for private repositories) and uploaded; no token in the sandbox |
+| Install | uv (Python 3.12), network on, allow-listed environment | The same commands in the sandbox, network on; the sandbox holds no secret |
+| Example | `python -s _run_example.py`, socket shim, no inherited environment | The same, under `env -i`, and the sandbox's network set to `deny-all` (no egress, no DNS) while it runs |
+| Scratch FalkorDB | `scripts/falkordb-local.sh` on 127.0.0.1:6390, flushed before each run | The same script and flushes, inside the sandbox |
+| Timeout | `STALEPROOF_RUN_TIMEOUT_MS` | The same, enforced with `timeout` in the sandbox |
+| JavaScript, TypeScript | Run | Not yet: skipped, not recorded, so the Action or the CLI still runs them |
+
+When the sandbox itself fails (no credentials, a quota, the time limit), nothing is recorded: the App reports it on its examples check run and the examples run elsewhere as before.
+
 ## Statuses and outcomes
 
 Each run gets a status, and a pair of runs gets an outcome. Both are defined in [Core concepts](concepts.md#runs); this is how to read them.
@@ -269,7 +285,7 @@ Runs are serialised by a process-wide queue: the scratch server is shared and fl
 - **Re-indexing moves commits.** The run key includes the indexed commit of every installed repository, so after a re-index the earlier runs no longer match and examples run again.
 - **Stitching prepends every earlier runnable block of the same language family on the page**, related or not; a failing earlier block fails the fragment.
 - **JS/TS packages are built the way their repositories build them.** A monorepo whose `build` needs a task runner's ordering (turbo, nx) beyond pnpm's `--filter <name>...` may not build: the run is skipped with the reason. Go examples are not run.
-- **Serverless hosts do not execute examples.** On Vercel, run results come only from runs recorded by a host with a sandbox (a local machine, a container or the GitHub Action), and a hosted workspace has none.
+- **Serverless hosts do not execute examples themselves.** On Vercel the GitHub App can run them in a Vercel Sandbox when the server has that switched on ([above](#in-a-vercel-sandbox-the-github-app)); otherwise run results come only from runs recorded by a host with a sandbox (a local machine, a container or the GitHub Action), and a hosted workspace has none.
 
 ## Related
 

@@ -68,8 +68,9 @@ function Hero() {
             evidence behind each edit.
           </p>
           <p className="hero-agents">
-            It also checks the files AI coding agents read: a path, command or link in <code>AGENTS.md</code>, <code>CLAUDE.md</code> or your Cursor and Copilot
-            rules that no longer exists is flagged like any other stale doc. <a href="#/docs/lint">How lint works</a>
+            It also checks the files AI coding agents read: a command, link or env var in <code>AGENTS.md</code>, <code>CLAUDE.md</code> or your
+            Cursor and Copilot rules that no longer matches the repository is flagged like any other stale doc, and a missing path is noted at lower confidence.{' '}
+            <a href="#/docs/lint">How lint works</a>
           </p>
           <div className="cta-row">
             <a className="btn btn-primary" href="#/install">

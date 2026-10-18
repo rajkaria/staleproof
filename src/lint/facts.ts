@@ -24,7 +24,10 @@ export class RepoFacts {
   /** Paths git history says were renamed (old → new, followed to the latest name). */
   readonly renamed = new Map<string, string>();
   private basenames?: Map<string, string[]>;
-  /** A docs framework routes extensionless links (`./intro`) itself. */
+  /**
+   * A docs framework routes extensionless links (`./intro`) itself. Also MkDocs configs split over several files
+   * (textual's `mkdocs-nav.yml`) and a TanStack site's `docs/<section>/config.json`.
+   */
   readonly docsFramework: boolean;
 
   constructor(
@@ -39,7 +42,7 @@ export class RepoFacts {
       for (let i = 1; i < parts.length; i++) this.dirs.add(parts.slice(0, i).join('/'));
     }
     this.docsFramework = [...files].some((f) =>
-      /^(?:[\w.-]+\/)?(docusaurus\.config\.[cm]?[jt]s|mint\.json|docs\.json|mkdocs\.ya?ml|conf\.py|astro\.config\.[cm]?[jt]s|vitepress\/config\.[cm]?[jt]s|\.vitepress\/config\.[cm]?[jt]s|theme\.config\.[jt]sx?|_config\.yml|hugo\.(toml|ya?ml)|book\.toml|nuxt\.config\.[jt]s|next\.config\.[cm]?[jt]s|source\.config\.ts)$/.test(f),
+      /^(?:[\w.-]+\/)?(docusaurus\.config\.[cm]?[jt]s|mint\.json|docs\.json|mkdocs[\w.-]*\.ya?ml|conf\.py|astro\.config\.[cm]?[jt]s|vitepress\/config\.[cm]?[jt]s|\.vitepress\/config\.[cm]?[jt]s|theme\.config\.[jt]sx?|_config\.yml|hugo\.(toml|ya?ml)|book\.toml|nuxt\.config\.[jt]s|next\.config\.[cm]?[jt]s|source\.config\.ts)$|^docs\/(?:[\w.-]+\/)?config\.json$/.test(f),
     );
   }
 
@@ -179,12 +182,20 @@ export class RepoFacts {
         if (t === undefined || !/\.(md|mdx|markdown)$/i.test(path)) return undefined;
         const set = new Set(scanDoc(path, t).sections.map((s) => s.anchor.toLowerCase()));
         for (const m of t.matchAll(/\b(?:id|name)=["']([^"']+)["']/g)) set.add(m[1]!.toLowerCase());
-        for (const m of t.matchAll(/\{#([\w-]+)\}/g)) set.add(m[1]!.toLowerCase());
+        for (const m of t.matchAll(/\{\s*#([\w-]+)(?:\s+[^}\n]*)?\}/g)) set.add(m[1]!.toLowerCase());
+        // hf doc-builder: ids keep only letters, digits and hyphens (`HF_TOKEN` → `hftoken`).
+        if (this.underToctree(path)) for (const s of scanDoc(path, t).sections) if (s.title) set.add(docBuilderSlug(s.title));
         return set;
       });
       this.anchorSets.set(path, p);
     }
     return p;
+  }
+
+  /** A page of an hf doc-builder site: a `_toctree.yml` in its folder or above. */
+  underToctree(path: string): boolean {
+    for (let d = posix.dirname(path); d !== '.' && d !== '/' && d !== ''; d = posix.dirname(d)) if (this.files.has(`${d}/_toctree.yml`)) return true;
+    return false;
   }
 
   /**
@@ -220,6 +231,15 @@ export class RepoFacts {
       return fromText && looseSlug(h.title) === want;
     });
   }
+}
+
+/** hf doc-builder's heading id: lower case, spaces to `-`, nothing but letters, digits and `-` kept (`HF_TOKEN` → `hftoken`). */
+export function docBuilderSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^\p{L}\p{N}\s-]/gu, '')
+    .replace(/\s+/g, '-');
 }
 
 /** A heading or anchor with case, punctuation and spacing differences removed: `I’ve updated, but` → `i-ve-updated-but`. */

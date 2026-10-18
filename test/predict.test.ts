@@ -65,7 +65,8 @@ describe('predicted breaks', () => {
       'docs/stale.md:0 L8 missing-import [exact] from miniclient import Client: imports `Client` from `miniclient`, which this pull request stops exporting',
     ]);
     expect(r.data.predicted[1]!.url).toBe('https://github.com/acme/mini-docs/blob/fixture/docs/getting-started.mdx#L16');
-    expect(r.summary).toContain('3 examples are predicted to break');
+    // As the report's title: the removed symbol counts (stable), the two signature predictions are beta checks'.
+    expect(r.summary).toContain('1 example is predicted to break (docs/getting-started.mdx:1), the call no longer fitting the changed code (2 more from beta checks, lower confidence).');
   });
 
   it('lists impacted examples that already did not fit the code', async () => {
@@ -82,7 +83,11 @@ describe('predicted breaks', () => {
   it('puts them at the top of the pull request comment', async () => {
     const r = await impactTool.run(ctx, { pr_url: PR.url });
     const md = checkMarkdown({ impact: r.data, summary: r.summary, cleared: [], org: 'acme' });
-    expect(md).toContain('### Staleproof: this pull request is predicted to break 3 docs examples');
+    // A removed symbol (example-removed, stable) counts; the two signature predictions are beta checks' (src/lint/maturity.ts):
+    // listed under lower confidence, not counted in the title or `predicted=`.
+    expect(md).toContain('### Staleproof: this pull request is predicted to break 1 docs example');
+    expect(md).toContain('**Predicted to break, lower confidence (beta rules)**');
+    expect(md).toMatch(/<!-- staleproof:counts breaks=0 predicted=1 /);
     expect(md).toContain('| [docs/getting-started.mdx:1](https://github.com/acme/mini-docs/blob/fixture/docs/getting-started.mdx#L30) | `g.ro_query` | calls `Graph.ro_query`, which this pull request removes |');
     expect(md).toContain('<details><summary>4 impacted example line(s) already did not fit the code before this pull request</summary>');
   });

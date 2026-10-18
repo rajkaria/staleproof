@@ -1,0 +1,28 @@
+{
+  "summary": "no finding link-broken at examples/src/langchain-classic/document_loaders/example_data/notion.md:41",
+  "source": {
+    "repo": "langchain-ai/langchainjs",
+    "sha": "84eca2b11c0900a67775dca258ebec04f8e852a2",
+    "urls": [
+      "https://github.com/langchain-ai/langchainjs/blob/84eca2b11c0900a67775dca258ebec04f8e852a2/examples/src/langchain-classic/document_loaders/example_data/notion.md#L41"
+    ]
+  },
+  "why": "Test data for the Notion document loader (a sample Notion export), not documentation of this repository. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "link-broken",
+      "file": "examples/src/langchain-classic/document_loaders/example_data/notion.md",
+      "line": 41,
+      "message": "The link target `examples/src/langchain-classic/document_loaders/example_data/CONTRIBUTING.md` does not exist."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "examples/package.json",
+    "examples/src/langchain-classic/document_loaders/example_data/notion.md",
+    "package.json",
+    "pnpm-workspace.yaml"
+  ],
+  "builtWith": "0.7.0"
+}

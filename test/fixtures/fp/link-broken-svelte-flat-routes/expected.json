@@ -1,0 +1,27 @@
+{
+  "summary": "no finding link-broken at documentation/docs/01-introduction/01-overview.md:26",
+  "source": {
+    "repo": "sveltejs/svelte",
+    "sha": "40bb08482f4857d91221638dec544a532bc35389",
+    "urls": [
+      "https://github.com/sveltejs/svelte/blob/40bb08482f4857d91221638dec544a532bc35389/documentation/docs/01-introduction/01-overview.md#L26"
+    ]
+  },
+  "why": "svelte.dev serves every docs page flat at /docs/svelte/<name without its NN- prefix>, so a bare relative link is a site route (`../kit` is /docs/kit, SvelteKit's docs). Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "link-broken",
+      "file": "documentation/docs/01-introduction/01-overview.md",
+      "line": 26,
+      "message": "The link target `documentation/docs/kit` does not exist."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE.md",
+    "documentation/docs/01-introduction/01-overview.md",
+    "package.json",
+    "pnpm-workspace.yaml"
+  ],
+  "builtWith": "0.7.0"
+}

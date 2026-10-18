@@ -1,0 +1,26 @@
+{
+  "summary": "no finding path-missing at .claude/skills/pr-flow/SKILL.md:96",
+  "source": {
+    "repo": "modelcontextprotocol/inspector",
+    "sha": "074b8108f340590268f2900741403755e923a11c",
+    "urls": [
+      "https://github.com/modelcontextprotocol/inspector/blob/074b8108f340590268f2900741403755e923a11c/.claude/skills/pr-flow/SKILL.md#L96"
+    ]
+  },
+  "why": "`../mcp-inspector-v2-2661` is an example sibling worktree directory outside the repository, by design (\"a **sibling** directory ... never a directory inside the repo\"). Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "path-missing",
+      "file": ".claude/skills/pr-flow/SKILL.md",
+      "line": 96,
+      "message": "`../mcp-inspector-v2-2661` does not exist in the repository."
+    }
+  ],
+  "files": [
+    ".claude/skills/pr-flow/SKILL.md",
+    ".gitignore",
+    "LICENSE",
+    "package.json"
+  ],
+  "builtWith": "0.7.0"
+}

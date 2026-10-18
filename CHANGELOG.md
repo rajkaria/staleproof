@@ -1,5 +1,53 @@
 # Changelog
 
+## 0.8.0 — 2026-10-18
+
+Never wrong by default: every rule earns its place on repositories Staleproof was never tuned on, the rest are marked
+beta, and a wrong finding is one click from becoming a regression test. The Drift Hall shows the record.
+
+- **Drift Hall** ([staleproof.dev/#/drift](https://staleproof.dev/#/drift), [docs/drift-hall.md](docs/drift-hall.md)):
+  63 popular repositories Staleproof was never tuned on, each pinned to a commit, every warning and error checked by
+  hand. Confirmed drift links to the line; false positives are counted by rule and by cause, not hidden; a held-out
+  set measures the rules on repositories the guards never saw. What 0.8.0 reports at warning or error was right 843
+  times of 881 on the hall (96%; the guards were written against these repositories) and 33 of 34 on 18 held-out
+  repositories (97%); 0.6.1 was right 1,255 times of 6,515 (19%). `scripts/drift-hall/` re-lints the same commits and
+  reports what a release fixed.
+- **Rule maturity** ([docs/false-positives.md](docs/false-positives.md)): a rule stays stable only at 80% precision
+  or better on the Drift Hall. Beta rules (the static example checks for imports, attributes, keywords and argument
+  counts, `cli-flag-unknown`, `symbol-missing`, `anchor-missing`, `path-missing`, `line-out-of-range`) report at info under "Lower confidence", and never
+  fail `--fail-on`, the Action, the App or the hooks, or lower the audit score. `[rules] "<id>" = "warning"` opts a
+  rule back in, everywhere: lint, the audit, the App and the hooks. Fingerprints are unchanged.
+- **"False positive?" on every finding**: a prefilled issue form (rule, repo@sha, file:line, message, the line,
+  version) in PR comments, the web audit and check pages, lint Markdown, SARIF, JSON, and as a code action in the
+  editor. Private repositories share only the rule, the message's shape and the version. `scripts/fp-to-fixture.ts
+  --issue N` turns a report into a regression fixture; `test/fixtures/fp/` holds 42 real cases from 20 repositories.
+- **Broken links**: docs sites are understood the way they serve pages: MkDocs configs split across files, TanStack
+  docs configs, order-prefixed pages, pages named after code files, `_redirects.yml`, Storybook `staticDirs`, included
+  snippets, Vue `:href` bindings, placeholders, templates and sample data.
+- **Missing paths**: placeholders, changelogs and plans, templates, check and branch names, recorded removals, other
+  tools' folders, module paths without an extension, and paths relative to a named package, a skill or a Cursor
+  rule's `globs` are not claims about the repository.
+- **Commands and CLIs**: `make a/b/c` shorthand, sentences saying a command does not exist, output blocks, two
+  programs sharing one name, and version strings are no longer reported.
+- **Environment variables**: `env-unused` is trusted again; a variable set in another repository's checkout is not
+  reported.
+- **Anchors**: headings after a comment closed on a code fence, links in MDX comments, MkDocs `{ #id }`, hf `[[id]]`
+  ids and slugs, and generated API anchors are understood. No fix is offered for an anchor a docs site resolves its
+  own way.
+- **Example checks**: overloaded factories, declared function types, functions a page defines itself, tabbed
+  alternatives, destructured exports and `.d.ts` subpaths are read correctly.
+- **The GitHub App can run the docs examples a pull request reaches, before and after it** (off until the server
+  turns it on; staleproof.dev turns it on after its end-to-end run): up to 3 per pull request in a Vercel Sandbox,
+  installs with the network on and examples with it off, results in a second check run "Staleproof · examples" with
+  the Action's before/after table. Private repositories are read with the installation token on Staleproof's server;
+  the token never enters the sandbox, a record or a log. A sandbox failure or timeout ends that check neutral. New
+  `[app] run-examples` setting; server settings `STALEPROOF_APP_RUN_EXAMPLES`, `STALEPROOF_APP_EXAMPLE_CHECKS_PER_DAY`,
+  `STALEPROOF_APP_EXAMPLES_BUDGET_S`, `STALEPROOF_APP_MAX_DURATION_S`, `STALEPROOF_SANDBOX_REGION`.
+- **The App's report** shows only example runs at the pull request's current commits.
+- **PR comments** stay under GitHub's size limit: the first 20 findings carry their own report link, the rest one
+  line.
+- Every pinned version (Action default, Claude Code plugin, docs) is 0.8.0.
+
 ## 0.7.0 — 2026-10-18
 
 The first run on a repository Staleproof has never seen says only what is so, in fewer words; one install button.

@@ -1,0 +1,26 @@
+{
+  "summary": "no finding docstring-param-unknown at src/lint/facts-docstrings.ts:128",
+  "source": {
+    "repo": "rajkaria/staleproof",
+    "sha": "32acdaded338dae467a46d5201cfdd3bad5a5026",
+    "urls": [
+      "https://github.com/rajkaria/staleproof/blob/32acdaded338dae467a46d5201cfdd3bad5a5026/src/lint/facts-docstrings.ts#L128"
+    ]
+  },
+  "why": "Found linting this repository (wave 1 integration, Oct 17): the JSDoc comment of the @param reader describes the syntax in a code span (`@param x`, `@param {T} x`), and lint read it as documenting a parameter x. A JSDoc block tag counts only at the start of its line (after /** or *), as the JSDoc spec defines block tags. Fixed before 0.5.0; this fixture keeps it fixed.",
+  "absent": [
+    {
+      "rule": "docstring-param-unknown",
+      "file": "src/lint/facts-docstrings.ts",
+      "line": 128,
+      "message": "(reported before the fix; see why)"
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "package.json",
+    "src/lint/facts-docstrings.ts"
+  ],
+  "builtWith": "0.6.1"
+}

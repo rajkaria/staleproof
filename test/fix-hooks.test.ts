@@ -19,6 +19,8 @@ describe('hooks name the verified fix', () => {
   it('stop: a renamed parameter gets its fix in the reason', async () => {
     const root = await mkdtemp(join(tmpdir(), 'staleproof-hooks-fix-'));
     await cp(join(HOOKS, 'repo'), root, { recursive: true });
+    // example-unknown-keyword is a beta rule (src/lint/maturity.ts): opted in, the stop hook blocks on it.
+    await writeFile(join(root, '.staleproof.toml'), '[rules]\n"example-unknown-keyword" = "error"\n');
     gitIn(root, 'init', '-q', '-b', 'main');
     gitIn(root, 'add', '-A');
     gitIn(root, 'commit', '-q', '-m', 'init');

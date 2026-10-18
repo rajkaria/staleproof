@@ -1,0 +1,29 @@
+{
+  "summary": "no finding path-missing at src/integrations/AGENTS.md:56",
+  "source": {
+    "repo": "PrefectHQ/prefect",
+    "sha": "87b5243845e733ed938b21cf7b9aeda6d6a4e194",
+    "urls": [
+      "https://github.com/PrefectHQ/prefect/blob/87b5243845e733ed938b21cf7b9aeda6d6a4e194/src/integrations/AGENTS.md#L56"
+    ]
+  },
+  "why": "\"`prefect-snowflake`'s `experimental/workers/spcs.py`\" is relative to that package: prefect_snowflake/experimental/workers/spcs.py exists. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "path-missing",
+      "file": "src/integrations/AGENTS.md",
+      "line": 56,
+      "message": "`experimental/workers/spcs.py` does not exist; it moved to `src/integrations/prefect-snowflake/prefect_snowflake/experimental/workers/spcs.py`."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "docs/docs.json",
+    "justfile",
+    "pyproject.toml",
+    "src/integrations/AGENTS.md",
+    "src/integrations/prefect-snowflake/prefect_snowflake/experimental/workers/spcs.py"
+  ],
+  "builtWith": "0.7.0"
+}

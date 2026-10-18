@@ -17,6 +17,7 @@ import { exampleFinding, exampleMismatches } from './examples.js';
 import { RepoFacts } from './facts.js';
 import { lintTargets, type LintTarget } from './files.js';
 import { RULE_BY_ID } from './rules.js';
+import { reportedSeverity } from './maturity.js';
 import { isSuppressed, scanClaims, type ScannedDoc, type Span } from './scan.js';
 import type { Finding, LintResult, RuleId, Severity, Surface } from './types.js';
 
@@ -32,7 +33,7 @@ export interface RawFinding {
   target?: string;
   /** Names that do exist there (fix candidates). */
   candidates?: string[];
-  /** Lower than the rule's level for this one finding (an anchor another docs site may resolve); never raises it. */
+  /** Caps this one finding's severity below the rule's (an anchor another docs site resolves): never raised by config. */
   severity?: Severity;
 }
 
@@ -202,11 +203,8 @@ export async function lintRepo(opts: LintOptions): Promise<LintResult> {
   for (const { page, f } of raw) {
     if (!enabled(f.rule) || isSuppressed(page.doc, f.span.line, f.rule)) continue;
     if (opts.files?.length && !opts.files.includes(page.target.path) && !(f.target && opts.files.includes(f.target))) continue;
-    const setting = config?.rules?.[f.rule];
-    const level: Severity = setting && setting !== 'off' ? setting : RULE_BY_ID.get(f.rule)!.severity;
-    // A check may lower one finding's level (an anchor another docs site resolves), never raise it.
-    const RANK: Record<Severity, number> = { info: 0, warning: 1, error: 2 };
-    const severity: Severity = f.severity && RANK[f.severity] < RANK[level] ? f.severity : level;
+    // A beta rule reports at info, lower confidence, until `[rules]` opts it in (src/lint/maturity.ts).
+    const { severity, lowerConfidence } = reportedSeverity(RULE_BY_ID.get(f.rule)!, config?.rules?.[f.rule], f.severity);
     const key = `${f.rule}\0${page.target.path}\0${f.subject}`;
     const n = occurrences.get(key) ?? 0;
     occurrences.set(key, n + 1);
@@ -227,6 +225,7 @@ export async function lintRepo(opts: LintOptions): Promise<LintResult> {
         ...(sha && repo.includes('/') ? { url: `https://github.com/${repo}/blob/${sha}/${page.target.path}#L${f.span.line}` } : {}),
       },
       fingerprint: fingerprint(f.rule, page.target.path, f.subject, n),
+      ...(lowerConfidence ? { lowerConfidence: true as const } : {}),
     });
   }
   const pageSurface = new Map(targets.map((t) => [t.path, t.surface]));
@@ -246,6 +245,7 @@ export async function lintRepo(opts: LintOptions): Promise<LintResult> {
     else summary.infos++;
     summary.byRule[f.rule] = (summary.byRule[f.rule] ?? 0) + 1;
     summary.bySurface[f.surface] = (summary.bySurface[f.surface] ?? 0) + 1;
+    if (f.lowerConfidence) summary.lowerConfidence = (summary.lowerConfidence ?? 0) + 1;
   }
   summary.ms = Date.now() - started;
   return { version: 1, repo, ...(sha ? { sha } : {}), findings, summary, warnings };

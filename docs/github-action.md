@@ -46,7 +46,7 @@ The steps of [action.yml](../action.yml), in order, on a pull request (`mode: ch
 
 1. **Set up Node.js and uv**: `actions/setup-node@v7` with Node 22, and `astral-sh/setup-uv@v10.3.0` (the example runner builds its virtualenvs with uv).
 2. **Start FalkorDB**, unless `falkordb-url` is set. With Docker on the runner (GitHub's Ubuntu runners have it), two containers from `falkordb/falkordb:latest`: `staleproof-graph` on port 6379 holds the graph, and `staleproof-scratch` on port 6390 is the disposable server the docs examples run against. The step waits up to 90 seconds for both ports, then sets `FALKORDB_URL=falkor://localhost:6379` and `STALEPROOF_SCRATCH_URL=falkor://localhost:6390` for the next steps. Without Docker it starts nothing, and the CLI starts both servers itself from falkordblite.
-3. **Install staleproof**: `npm install -g staleproof@<version>` (default `0.7.0`). With `version: source`, the CLI is built from the action's own checkout instead (`npm ci`, then `tsup`). When the version cannot be installed from npm, the step warns `staleproof@<version> is not on npm; building it from this action's source instead.` and builds it the same way.
+3. **Install staleproof**: `npm install -g staleproof@<version>` (default `0.8.0`). With `version: source`, the CLI is built from the action's own checkout instead (`npm ci`, then `tsup`). When the version cannot be installed from npm, the step warns `staleproof@<version> is not on npm; building it from this action's source instead.` and builds it the same way.
 4. **Choose the mode**: with `mode: auto` (the default), `check` when there is a pull request (the `pull_request` event, or `pr-url`), else `audit`. Any other value than `auto`, `check`, `audit`, `fix` or `release` fails with `mode must be auto, check, audit, fix or release (got <mode>)`.
 5. **Re-index**, only with `reindex: 'true'` and `falkordb-url` set: `staleproof index <this repository> <also-index...>`. See [Keep the graph between runs](#keep-the-graph-between-runs).
 6. **Check the pull request**:
@@ -82,14 +82,19 @@ They show up three ways:
 
   **AI agent instructions**
 
-  - [`AGENTS.md:5`](https://github.com/acme/app/blob/<head>/AGENTS.md#L5) `lint:docs` is not a script in package.json. <sub>command-missing</sub>
-  - [`AGENTS.md:6`](https://github.com/acme/app/blob/<head>/AGENTS.md#L6) `docs/setup.md` does not exist; it moved to `docs/guides/setup.md`. <sub>path-missing</sub>
+  - [`AGENTS.md:5`](https://github.com/acme/app/blob/<head>/AGENTS.md#L5) `lint:docs` is not a script in package.json. <sub>command-missing · [False positive?](https://github.com/rajkaria/staleproof/issues/new?template=false-positive.yml&…)</sub>
 
   **README and contributing guides**
 
-  - [`README.md:10`](https://github.com/acme/app/blob/<head>/README.md#L10) `lint:docs` is not a script in package.json. <sub>command-missing</sub>
+  - [`README.md:10`](https://github.com/acme/app/blob/<head>/README.md#L10) `lint:docs` is not a script in package.json. <sub>command-missing · [False positive?](…)</sub>
 
-  <sub>3 errors in 2 files (12 files checked, 840 ms).</sub>
+  **Lower confidence (beta rules)**
+
+  <sub>Shown for review: these rules are still earning trust, so their findings never fail a check or lower the score. Opt a rule in with `[rules] "<id>" = "warning"` in .staleproof.toml.</sub>
+
+  - [`AGENTS.md:6`](https://github.com/acme/app/blob/<head>/AGENTS.md#L6) `docs/setup.md` does not exist; it moved to `docs/guides/setup.md`. <sub>path-missing · [False positive?](…)</sub>
+
+  <sub>2 errors, 1 info in 2 files (12 files checked, 840 ms); 1 of them lower confidence.</sub>
   ```
 
   The title says `this pull request makes <n> docs reference(s) wrong` when nothing broke or is predicted to break. A pull request that makes nothing wrong gets no section, only `docs references: none made wrong (<n> files checked)` in the footer.
@@ -112,7 +117,7 @@ Every input is optional.
 | `model` | `''` | Agent mode's model, passed as `STALEPROOF_MODEL`. Empty: `claude-sonnet-5-5`. Set it whenever you set `base-url`. |
 | `base-url` | `''` | An Anthropic-compatible API for agent mode, passed as `ANTHROPIC_BASE_URL`, for example `https://api.deepseek.com/anthropic`. |
 | `runs` | `'3'` | Graph mode runs up to this many affected examples before and after the pull request; `'0'` runs none. Passed as `--runs`. |
-| `fail-on` | `never` | Check mode: `breaks` fails the job when an example passes before the pull request and fails after it; `predicted` also fails it when a static check predicts an example's call no longer fits the changed code; `findings` fails it when the pull request makes a docs reference wrong (a new error-level lint finding). Audit mode: `mismatches` fails the job when any example no longer fits the code. |
+| `fail-on` | `never` | Check mode: `breaks` fails the job when an example passes before the pull request and fails after it; `predicted` also fails it when a static check predicts an example's call no longer fits the changed code; `findings` fails it when the pull request makes a docs reference wrong (a new error-level lint finding). Audit mode: `mismatches` fails the job when any example no longer fits the code. Beta rules never fail the check unless `[rules]` opts them in at `warning` or `error`: a beta check's predicted break is listed as lower confidence and not counted by `predicted`. |
 | `fail-under` | `''` | Audit mode: fail the job when the docs health score is below this (0-100). |
 | `audit-runs` | `'20'` | Audit mode: run up to this many Python, JavaScript and TypeScript examples at the default branch before scoring; `'0'` for static checks only. Passed as `audit --run`. |
 | `issue` | `'true'` | Audit mode: keep one issue up to date with the audit (opened when something needs fixing, updated on each run, closed when all clear). Needs `issues: write`. |
@@ -125,7 +130,7 @@ Every input is optional.
 | `reindex` | `'false'` | With `falkordb-url`: `'true'` re-indexes this repository and `also-index` at their default branch heads before the check. |
 | `cache` | `'true'` | Keep the job's graph (a FalkorDB dump) and the parse cache between runs with actions/cache, keyed by the Staleproof version (with `version: source`, a hash of the action's source), the repository, `also-index` and the base commit: a later run on the same base skips indexing, and an older dump is re-indexed with only the changed files parsed. Ignored with `falkordb-url`. |
 | `github-token` | `${{ github.token }}` | Reads the repository (clones, the GitHub API, file contents) and posts the comment. Passed as `GITHUB_TOKEN` to Staleproof and as `GH_TOKEN` to the GitHub CLI. |
-| `version` | `'0.7.0'` | The `staleproof` npm version to run, or `source` to build the CLI from the action's checkout. When that version is not on npm, the CLI is built from the action's source. |
+| `version` | `'0.8.0'` | The `staleproof` npm version to run, or `source` to build the CLI from the action's checkout. When that version is not on npm, the CLI is built from the action's source. |
 | `digest-webhook` | `''` | Audit mode: a Slack, Discord or other webhook (use a secret) to post the [docs digest](audit.md#weekly-digest-to-slack-or-discord) to after each audit. The digest's state is kept in the audit issue. |
 | `release-from` | `''` | Release mode: the previous release to compare with. Empty: the latest tag before the release. |
 | `release-to` | `''` | Release mode: the release. Empty: the checkout's `HEAD` (the tag on `release: published`). |
@@ -331,19 +336,19 @@ jobs:
         env:
           FALKORDB_URL: ${{ secrets.STALEPROOF_FALKORDB_URL }}
           STALEPROOF_ORG: falkordb
-        run: npx -y staleproof@0.7.0 index FalkorDB/falkordb-py FalkorDB/GraphRAG-SDK FalkorDB/docs
+        run: npx -y staleproof@0.8.0 index FalkorDB/falkordb-py FalkorDB/GraphRAG-SDK FalkorDB/docs
 ```
 
 This workflow uses only the documented `index` command; unlike the action itself, it has not been run on GitHub. Re-indexing never deletes: what disappeared is marked `gone`, and verdicts and decisions keep pointing at it.
 
 ## Pin the version
 
-`@v1` follows the action's `v1` tag, and the `version` input pins the CLI it installs (default `0.7.0`). For runs that cannot change under you, pin the action to a commit and the CLI to a version:
+`@v1` follows the action's `v1` tag, and the `version` input pins the CLI it installs (default `0.8.0`). For runs that cannot change under you, pin the action to a commit and the CLI to a version:
 
 ```yaml
 - uses: rajkaria/staleproof@<commit-sha>
   with:
-    version: 0.7.0
+    version: 0.8.0
 ```
 
 ## The comment

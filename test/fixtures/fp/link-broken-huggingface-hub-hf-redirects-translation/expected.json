@@ -1,0 +1,29 @@
+{
+  "summary": "no finding link-broken at docs/source/ko/package_reference/cards.md:4",
+  "source": {
+    "repo": "huggingface/huggingface_hub",
+    "sha": "bb2ef7579c3d2dc2eb49b16ccf15a070fe5b7023",
+    "urls": [
+      "https://github.com/huggingface/huggingface_hub/blob/bb2ef7579c3d2dc2eb49b16ccf15a070fe5b7023/docs/source/ko/package_reference/cards.md#L4"
+    ]
+  },
+  "why": "The Korean docs are served with the English _redirects.yml, which redirects how-to-model-cards to guides/model-cards. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "link-broken",
+      "file": "docs/source/ko/package_reference/cards.md",
+      "line": 4,
+      "message": "The link target `docs/source/ko/how-to-model-cards` does not exist."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "Makefile",
+    "docs/source/en/_redirects.yml",
+    "docs/source/ko/package_reference/cards.md",
+    "pyproject.toml",
+    "setup.py"
+  ],
+  "builtWith": "0.7.0"
+}

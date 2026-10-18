@@ -1,0 +1,78 @@
+{
+  "summary": "no finding example-missing-import at docs/typescript.md:14",
+  "source": {
+    "repo": "sindresorhus/execa",
+    "sha": "b87aab71b2ac3da1799914a7ef79a36bd2d14c03",
+    "urls": [
+      "https://github.com/sindresorhus/execa/blob/b87aab71b2ac3da1799914a7ef79a36bd2d14c03/docs/typescript.md#L14"
+    ]
+  },
+  "why": "Options, Result and ResultPromise are types: package.json's exports give index.d.ts as the types of '.', and index.d.ts exports them (export type {...} from './types/...'). A TypeScript example imports them from 'execa' and compiles.",
+  "absent": [
+    {
+      "rule": "example-missing-import",
+      "file": "docs/typescript.md",
+      "line": 14,
+      "message": "`execa` has no `ResultPromise`."
+    },
+    {
+      "rule": "example-missing-import",
+      "file": "docs/typescript.md",
+      "line": 14,
+      "message": "`execa` has no `Result`."
+    },
+    {
+      "rule": "example-missing-import",
+      "file": "docs/typescript.md",
+      "line": 14,
+      "message": "`execa` has no `Options`."
+    },
+    {
+      "rule": "example-missing-import",
+      "file": "docs/typescript.md",
+      "line": 14,
+      "message": "`execa` has no `StdinOption`."
+    },
+    {
+      "rule": "example-missing-import",
+      "file": "docs/typescript.md",
+      "line": 14,
+      "message": "`execa` has no `StdoutStderrOption`."
+    },
+    {
+      "rule": "example-missing-import",
+      "file": "docs/typescript.md",
+      "line": 14,
+      "message": "`execa` has no `TemplateExpression`."
+    },
+    {
+      "rule": "example-missing-import",
+      "file": "docs/typescript.md",
+      "line": 14,
+      "message": "`execa` has no `Message`."
+    },
+    {
+      "rule": "example-missing-import",
+      "file": "docs/typescript.md",
+      "line": 14,
+      "message": "`execa` has no `VerboseObject`."
+    },
+    {
+      "rule": "example-missing-import",
+      "file": "docs/typescript.md",
+      "line": 14,
+      "message": "`execa` has no `ExecaMethod`."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "docs/typescript.md",
+    "index.d.ts",
+    "index.js",
+    "lib/return/final-error.js",
+    "license",
+    "package.json"
+  ],
+  "builtWith": "0.7.0",
+  "pending": "not fixed yet: the guard is case 11 of .ocean/wave3/wiring/C-fp-guards.md"
+}

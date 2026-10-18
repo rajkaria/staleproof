@@ -60,6 +60,18 @@ function charsOf(text: string, line: number, col: number): Ch[] {
 }
 
 /** Logical command lines of a page: spans and shell-block lines (prompts stripped, continuations joined). */
+/** The prose that introduces a block says what follows is output: "You should see something like:", "Output:". */
+const OUTPUT_INTRO = /(?:\byou(?:['’]ll| will| should)? see\b|\bshould (?:print|output|show|display|look like)\b|\b(?:sample |example |expected |the |its |command )?output\b|\bsomething like\b|\blooks? like (?:this|the following)\b)[^.]*:\s*$/i;
+
+function introducesOutput(doc: ScannedDoc, fenceLine: number): boolean {
+  for (let k = fenceLine - 2; k >= 0; k--) {
+    const l = (doc.lines[k] ?? '').trim();
+    if (!l) continue;
+    return OUTPUT_INTRO.test(l);
+  }
+  return false;
+}
+
 function logicalLines(doc: ScannedDoc): { chars: Ch[]; inline: boolean; fence?: number }[] {
   const out: { chars: Ch[]; inline: boolean; fence?: number }[] = [];
   for (const span of doc.spans) {
@@ -72,6 +84,10 @@ function logicalLines(doc: ScannedDoc): { chars: Ch[]; inline: boolean; fence?: 
     const promptRe = shell ? PROMPT : DOLLAR_PROMPT;
     const prompted = fence.lines.some((l) => promptRe.test(l.text));
     if (!shell && !prompted) return;
+    // "You should see something like:" over a block without prompts: the block is output (crewAI's `crewai v0.102.0`).
+    if (!prompted && introducesOutput(doc, fence.line)) return;
+    // Lines no command starts with: a list item (`- crewai`), a tree, or a tool's `name v1.2.3` listing row.
+    if (!prompted && fence.lines.some((l) => /^\s*(?:- \S|[├└│])/.test(l.text) || /^\s*[\w.-]+ v\d+\.\d+(?:\.\d+)?\s*$/.test(l.text))) return;
     let heredoc: string | null = null;
     let acc: Ch[] | null = null;
     for (const fl of fence.lines) {
@@ -450,6 +466,19 @@ export function historical(doc: ScannedDoc, w: Word, inline: boolean): boolean {
   return !inline && HISTORICAL.test(proseAbove(doc, w, 4));
 }
 
+/**
+ * The sentence says the command is not there, on purpose: "There is deliberately **no `npm run ci`**", "`npm run ci`
+ * now fails with npm's missing-script error" (modelcontextprotocol/inspector). Accurate docs, not drift.
+ */
+const NEGATED_BEFORE = /\b(?:no|not|never|nor|without)\s*[*_]*`?$/i;
+const NEGATED_AFTER = /^`?[*_]*\s*(?:(?:now |then |will |would )?(?:fails?|errors?)\b|(?:does not|doesn['’]t|no longer) (?:exist|work)|(?:is|are) (?:not|gone|removed)\b)/i;
+
+export function negated(doc: ScannedDoc, from: Word, name: Word): boolean {
+  const first = doc.lines[from.line - 1] ?? '';
+  const last = doc.lines[name.line - 1] ?? '';
+  return NEGATED_BEFORE.test(first.slice(0, from.column - 1)) || NEGATED_AFTER.test(last.slice(name.endColumn - 1));
+}
+
 /** The sentence or the paragraph above a block is about the reader's own project. */
 const YOUR_PROJECT = /\byour (?:own )?(?:project|app|application|repo|repository|package\.json|package|codebase|site|workspace|monorepo|ci|pipeline|workflow|makefile|justfile|taskfile|pyproject\.toml|scripts?)\b|\b(?:in|to|from) the (?:generated|new|created|scaffolded) (?:project|app|folder|directory)\b|\badd (?:this|the following|a script|these)\b[^.]*\b(?:to|in) (?:your|the) `?(?:package\.json|makefile|scripts)/i;
 
@@ -539,6 +568,7 @@ export async function checkCommands(doc: ScannedDoc, ctx: CommandCheckContext): 
     if (!j || defined.has(j.name.text)) continue;
     if (ctx.surface !== 'agent' && aboutReader(doc, j.name, cmd.inline)) continue;
     if (historical(doc, j.name, cmd.inline)) continue;
+    if (negated(doc, j.from, j.name)) continue;
     // The whole command (`npm run lint:docs`) when it is written as one run of words; else just the name.
     const line = doc.lines[j.name.line - 1] ?? '';
     const whole = j.from.line === j.name.line && line.slice(j.from.column - 1, j.name.endColumn - 1) === j.subject;
@@ -782,6 +812,8 @@ function judgeMake(w: Word[], cwd: Cwd, sf: ScriptFacts, ctx: CommandCheckContex
     const x = target.text;
     if (isPlaceholder(target) || x.startsWith('.')) continue;
     if (mfs.some((m) => m.targets.has(x) || m.patterns.some((p) => patternMatches(p, x)))) continue;
+    // Shorthand for several targets: `make format/lint/typecheck` when each one is a target (pydantic/logfire).
+    if (x.includes('/') && x.split('/').every((part) => part && mfs.some((m) => m.targets.has(part)))) continue;
     // A file of that name is "up to date"; `x.c` next to it builds by an implicit rule.
     if (dirs.some((d) => ctx.facts.exists(d ? `${d}/${x}` : x) || [...ctx.facts.files].some((f) => f.startsWith(d ? `${d}/${x}.` : `${x}.`) && !f.slice((d ? d.length + 1 : 0) + x.length + 1).includes('/')))) continue;
     // From prose, a target another Makefile defines is not judged; nor one a folder's catch-all

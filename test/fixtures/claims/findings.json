@@ -1,7 +1,7 @@
 [
   {
     "rule": "path-missing",
-    "severity": "error",
+    "severity": "info",
     "message": "`src/missing-style.ts` does not exist in the repository.",
     "path": ".cursor/rules/style.mdc",
     "line": 5,
@@ -10,11 +10,12 @@
     "endColumn": 42,
     "surface": "agent",
     "subject": "src/missing-style.ts",
-    "fingerprint": "0c3cde720d85f4bb"
+    "fingerprint": "0c3cde720d85f4bb",
+    "lowerConfidence": true
   },
   {
     "rule": "path-missing",
-    "severity": "error",
+    "severity": "info",
     "message": "`src/settings.ts` does not exist in the repository.",
     "path": "AGENTS.md",
     "line": 4,
@@ -23,11 +24,12 @@
     "endColumn": 36,
     "surface": "agent",
     "subject": "src/settings.ts",
-    "fingerprint": "9290f6e84051e124"
+    "fingerprint": "9290f6e84051e124",
+    "lowerConfidence": true
   },
   {
     "rule": "path-missing",
-    "severity": "error",
+    "severity": "info",
     "message": "`src/util/old.ts` does not exist; it moved to `src/helpers/old.ts`.",
     "path": "AGENTS.md",
     "line": 5,
@@ -36,11 +38,12 @@
     "endColumn": 41,
     "surface": "agent",
     "subject": "src/util/old.ts",
-    "fingerprint": "5090c275a86d7e67"
+    "fingerprint": "5090c275a86d7e67",
+    "lowerConfidence": true
   },
   {
     "rule": "line-out-of-range",
-    "severity": "warning",
+    "severity": "info",
     "message": "`src/app.ts` has 4 lines; line 999 does not exist.",
     "path": "AGENTS.md",
     "line": 6,
@@ -49,7 +52,8 @@
     "endColumn": 43,
     "surface": "agent",
     "subject": "src/app.ts:999",
-    "fingerprint": "dd8d0b53b2b19a79"
+    "fingerprint": "dd8d0b53b2b19a79",
+    "lowerConfidence": true
   },
   {
     "rule": "link-broken",
@@ -79,7 +83,7 @@
   },
   {
     "rule": "example-unknown-keyword",
-    "severity": "error",
+    "severity": "info",
     "message": "`connect` has no parameter `timeout`.",
     "path": "README.md",
     "line": 7,
@@ -88,11 +92,12 @@
     "endColumn": 8,
     "surface": "example",
     "subject": "claims_demo.connect",
-    "fingerprint": "b0cd9604900df038"
+    "fingerprint": "b0cd9604900df038",
+    "lowerConfidence": true
   },
   {
     "rule": "symbol-missing",
-    "severity": "error",
+    "severity": "info",
     "message": "`Client` has no member `explain`.",
     "path": "docs/api.md",
     "line": 3,
@@ -101,7 +106,8 @@
     "endColumn": 87,
     "surface": "docs",
     "subject": "Client.explain",
-    "fingerprint": "994f72e3cd62728b"
+    "fingerprint": "994f72e3cd62728b",
+    "lowerConfidence": true
   },
   {
     "rule": "command-missing",
@@ -209,7 +215,7 @@
   },
   {
     "rule": "cli-flag-unknown",
-    "severity": "error",
+    "severity": "info",
     "message": "`claims-demo sync` has no option `--force`.",
     "path": "docs/commands.md",
     "line": 28,
@@ -218,11 +224,12 @@
     "endColumn": 37,
     "surface": "docs",
     "subject": "claims-demo sync --force",
-    "fingerprint": "cf0d027153ca78e7"
+    "fingerprint": "cf0d027153ca78e7",
+    "lowerConfidence": true
   },
   {
     "rule": "cli-flag-unknown",
-    "severity": "error",
+    "severity": "info",
     "message": "`claims-py pull` has no option `--forse`.",
     "path": "docs/commands.md",
     "line": 32,
@@ -231,7 +238,8 @@
     "endColumn": 24,
     "surface": "docs",
     "subject": "claims-py pull --forse",
-    "fingerprint": "273a26490682f00f"
+    "fingerprint": "273a26490682f00f",
+    "lowerConfidence": true
   },
   {
     "rule": "cli-command-unknown",
@@ -274,7 +282,7 @@
   },
   {
     "rule": "anchor-missing",
-    "severity": "warning",
+    "severity": "info",
     "message": "This page has no heading `#configuration`.",
     "path": "docs/guide.md",
     "line": 5,
@@ -283,11 +291,12 @@
     "endColumn": 66,
     "surface": "docs",
     "subject": "#configuration",
-    "fingerprint": "f19b336366aa688a"
+    "fingerprint": "f19b336366aa688a",
+    "lowerConfidence": true
   },
   {
     "rule": "path-missing",
-    "severity": "error",
+    "severity": "info",
     "message": "`lib/removed.ts` does not exist; it was deleted in <sha>.",
     "path": "docs/guide.md",
     "line": 7,
@@ -296,11 +305,12 @@
     "endColumn": 84,
     "surface": "docs",
     "subject": "lib/removed.ts",
-    "fingerprint": "454d6167cb419864"
+    "fingerprint": "454d6167cb419864",
+    "lowerConfidence": true
   },
   {
     "rule": "anchor-missing",
-    "severity": "warning",
+    "severity": "info",
     "message": "`docs/setup.md` has no heading `#legacy-usage`.",
     "path": "docs/guide.md",
     "line": 9,
@@ -309,7 +319,8 @@
     "endColumn": 77,
     "surface": "docs",
     "subject": "docs/setup.md#legacy-usage",
-    "fingerprint": "ffbf2d37b37ad82e"
+    "fingerprint": "ffbf2d37b37ad82e",
+    "lowerConfidence": true
   },
   {
     "rule": "docstring-param-unknown",

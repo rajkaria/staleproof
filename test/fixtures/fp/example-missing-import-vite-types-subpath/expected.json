@@ -1,0 +1,45 @@
+{
+  "summary": "no finding example-missing-import at docs/guide/api-hmr.md:12, docs/guide/api-hmr.md:16",
+  "source": {
+    "repo": "vitejs/vite",
+    "sha": "df7503cc499e0b49e45701e3be7546918ee9d322",
+    "urls": [
+      "https://github.com/vitejs/vite/blob/df7503cc499e0b49e45701e3be7546918ee9d322/docs/guide/api-hmr.md#L12",
+      "https://github.com/vitejs/vite/blob/df7503cc499e0b49e45701e3be7546918ee9d322/docs/guide/api-hmr.md#L16"
+    ]
+  },
+  "why": "vite/types/customEvent.d.ts and vite/types/hot.d.ts are type-only subpaths: packages/vite/package.json exports './types/*': { types: './types/*' }, and packages/vite/types/ holds those .d.ts files. The example is 'ts twoslash' and compiles.",
+  "absent": [
+    {
+      "rule": "example-missing-import",
+      "file": "docs/guide/api-hmr.md",
+      "line": 12,
+      "message": "`vite` has no module `types`."
+    },
+    {
+      "rule": "example-missing-import",
+      "file": "docs/guide/api-hmr.md",
+      "line": 12,
+      "message": "`vite` has no module `types`."
+    },
+    {
+      "rule": "example-missing-import",
+      "file": "docs/guide/api-hmr.md",
+      "line": 16,
+      "message": "`vite` has no module `types`."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "docs/guide/api-hmr.md",
+    "docs/package.json",
+    "package.json",
+    "packages/vite/package.json",
+    "packages/vite/src/node/index.ts",
+    "packages/vite/types/customEvent.d.ts",
+    "packages/vite/types/hot.d.ts",
+    "pnpm-workspace.yaml"
+  ],
+  "builtWith": "0.7.0"
+}

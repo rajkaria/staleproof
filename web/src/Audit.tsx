@@ -3,7 +3,7 @@ import { streamAudit, type AuditEvent } from './api';
 import { PACKAGE, PRODUCT, SITE_URL } from './docs/manifest';
 import { CodeBlock, Icon } from './layout';
 import { repoFromInput } from './install-links';
-import { findingGroups, type WebFinding } from './CheckResults';
+import { findingGroups, reportUrl, type WebFinding } from './CheckResults';
 import type { AuditData, Health } from './types';
 
 /** Why API coverage was not measured (src/audit.ts `coverage.unmeasured`, 0.7): absent on older servers. */
@@ -145,49 +145,88 @@ export function AuditPage({ initialRepo, health }: { initialRepo?: string; healt
   );
 }
 
-/** Docs references that no longer match the repository, AI agent instructions first. */
+type AuditFinding = NonNullable<AuditFindings['findings']>[number];
+type AuditMismatch = AuditData['mismatches'][number];
+
+/** The heading beta findings and mismatches are folded under on the audit page: never counted, never deducted. */
+export const AUDIT_LOWER_CONFIDENCE_TITLE = 'Lower confidence (beta checks)';
+
+function FindingItem({ f, multi }: { f: AuditFinding; multi: boolean }) {
+  return (
+    <li>
+      <div className="mm-top">
+        {f.evidence?.url ? (
+          <a href={f.evidence.url} target="_blank" rel="noreferrer">
+            <code>
+              {multi && f.repo ? `${f.repo}:` : ''}
+              {f.path}
+            </code>{' '}
+            line {f.line}
+          </a>
+        ) : (
+          <span>
+            <code>{f.path}</code> line {f.line}
+          </span>
+        )}
+        <span className={`chip ${f.severity === 'error' ? 'sev breaking' : 'sev api'}`}>{f.rule}</span>
+      </div>
+      {f.heading && <div className="mm-heading muted small">{f.heading}</div>}
+      <div className="mm-detail">
+        {f.message}{' '}
+        <a className="fp-link muted small" href={reportUrl(f)} target="_blank" rel="noreferrer" title="Report a false positive: opens a prefilled GitHub issue">
+          False positive?
+        </a>
+      </div>
+    </li>
+  );
+}
+
+function MismatchItem({ m, beta }: { m: AuditMismatch; beta?: boolean }) {
+  return (
+    <li>
+      <div className="mm-top">
+        <a href={m.url} target="_blank" rel="noreferrer">
+          <code>{short(m.example)}</code> line {m.line}
+        </a>
+        <span className={`chip ${beta ? 'sev api' : 'sev breaking'}`}>{KIND_LABEL[m.kind]}</span>
+      </div>
+      <div className="mm-heading muted small">{m.heading}</div>
+      <div className="mm-detail">
+        <code>{m.call}</code> — {m.detail}
+      </div>
+    </li>
+  );
+}
+
+/** Docs references that no longer match the repository, AI agent instructions first; beta rules' findings are folded below. */
 function FindingsSection({ data }: { data: AuditFindings }) {
   const findings = data.findings;
   if (!findings || !data.repos.some((r) => r.findingsChecked)) return null;
   const multi = data.repos.length > 1;
+  // Trusted findings only: beta rules' ones are folded under "Lower confidence (beta checks)" and never counted.
+  const trusted = findings.filter((f) => !f.lowerConfidence);
   return (
     <>
       <h3>
         Docs references that no longer match the repository{' '}
-        <span className={`chip ${findings.length ? 'sev breaking' : 'ok'}`}>{findings.length}</span>
+        <span className={`chip ${trusted.length ? 'sev breaking' : 'ok'}`}>{trusted.length}</span>
       </h3>
-      {findings.length === 0 ? (
+      {trusted.length === 0 ? (
         <p className="audit-ok">
-          <Icon name="check" size={16} /> Every path, link, anchor, command and env var the docs and AI agent files name matches the repository.
+          <Icon name="check" size={16} />{' '}
+          {findings.length
+            ? 'No path, link, anchor, command or env var the stable checks read is wrong; the beta checks\' findings are below, under Lower confidence.'
+            : 'Every path, link, anchor, command and env var the docs and AI agent files name matches the repository.'}
         </p>
       ) : (
         <>
           <p className="muted small">Read from the repository at the indexed commit: each one names its line and where {PRODUCT} looked.</p>
-          {findingGroups(findings).map(([title, list]) => (
+          {findingGroups(trusted).map(([title, list]) => (
             <div key={title}>
               <h4>{title}</h4>
               <ul className="mismatch-list">
                 {list.map((f) => (
-                  <li key={`${f.repo ?? ''}|${f.fingerprint}`}>
-                    <div className="mm-top">
-                      {f.evidence?.url ? (
-                        <a href={f.evidence.url} target="_blank" rel="noreferrer">
-                          <code>
-                            {multi && f.repo ? `${f.repo}:` : ''}
-                            {f.path}
-                          </code>{' '}
-                          line {f.line}
-                        </a>
-                      ) : (
-                        <span>
-                          <code>{f.path}</code> line {f.line}
-                        </span>
-                      )}
-                      <span className={`chip ${f.severity === 'error' ? 'sev breaking' : 'sev api'}`}>{f.rule}</span>
-                    </div>
-                    {f.heading && <div className="mm-heading muted small">{f.heading}</div>}
-                    <div className="mm-detail">{f.message}</div>
-                  </li>
+                  <FindingItem key={`${f.repo ?? ''}|${f.fingerprint}`} f={f} multi={multi} />
                 ))}
               </ul>
             </div>
@@ -198,6 +237,43 @@ function FindingsSection({ data }: { data: AuditFindings }) {
   );
 }
 
+/** Beta findings and example lines, folded: shown for review, never counted in a chip or the score (src/lint/maturity.ts). */
+export function LowerConfidenceSection({ findings, mismatches, multi }: { findings: AuditFinding[]; mismatches: AuditMismatch[]; multi: boolean }) {
+  if (!findings.length && !mismatches.length) return null;
+  const n = findings.length + mismatches.length;
+  return (
+    <details className="changed lower-confidence">
+      <summary>
+        <strong>{AUDIT_LOWER_CONFIDENCE_TITLE}</strong> <span className="muted">({n})</span>
+      </summary>
+      <p className="muted small">
+        These checks are still earning trust, so what they find never fails a check or lowers the score. A repository opts a rule in with{' '}
+        <code>[rules] "&lt;id&gt;" = "warning"</code> in <code>.staleproof.toml</code>.
+      </p>
+      {findings.length > 0 && (
+        <>
+          <h4>Docs references</h4>
+          <ul className="mismatch-list">
+            {findings.map((f) => (
+              <FindingItem key={`${f.repo ?? ''}|${f.fingerprint}`} f={f} multi={multi} />
+            ))}
+          </ul>
+        </>
+      )}
+      {mismatches.length > 0 && (
+        <>
+          <h4>Example lines</h4>
+          <ul className="mismatch-list">
+            {mismatches.map((m) => (
+              <MismatchItem key={`${m.example}|${m.line}|${m.detail}`} m={m} beta />
+            ))}
+          </ul>
+        </>
+      )}
+    </details>
+  );
+}
+
 export function AuditReport({ repo, summary, data, indexedMs }: { repo: string; summary: string; data: Omit<AuditData, 'summary'>; indexedMs?: number }) {
   // The host serving this page serves the badge too (the canonical domain may not point here yet).
   const site = typeof window !== 'undefined' && /^https?:/.test(window.location.origin) ? window.location.origin : SITE_URL;
@@ -205,6 +281,9 @@ export function AuditReport({ repo, summary, data, indexedMs }: { repo: string; 
   const failing = data.runs.filter((r) => r.status === 'fail' || r.status === 'timeout');
   const unmeasured = unmeasuredCoverage(data.coverage);
   const linked = data.examples.linked;
+  const counted = data.mismatches.filter((m) => !m.lowerConfidence);
+  const betaMismatches = data.mismatches.filter((m) => m.lowerConfidence);
+  const betaFindings = ((data as unknown as AuditFindings).findings ?? []).filter((f) => f.lowerConfidence);
   return (
     <div className="audit-report">
       <div className="audit-head">
@@ -254,31 +333,24 @@ export function AuditReport({ repo, summary, data, indexedMs }: { repo: string; 
             ? `No docs example calls the code (${data.examples.total} example${data.examples.total === 1 ? '' : 's'} read), so none was checked against it.`
             : 'The docs have no code examples to check.'}
         </p>
-      ) : data.mismatches.length === 0 ? (
+      ) : counted.length === 0 ? (
         <p className="audit-ok">
-          <Icon name="check" size={16} /> Every call in the {linked} example{linked === 1 ? '' : 's'} that use{linked === 1 ? 's' : ''} the code fits the signature it reaches.
+          <Icon name="check" size={16} />{' '}
+          {betaMismatches.length
+            ? `No call in the ${linked} example${linked === 1 ? '' : 's'} that use${linked === 1 ? 's' : ''} the code is known not to fit the signature it reaches; the beta checks' lines are below, under Lower confidence.`
+            : `Every call in the ${linked} example${linked === 1 ? '' : 's'} that use${linked === 1 ? 's' : ''} the code fits the signature it reaches.`}
         </p>
       ) : (
         <>
           <p className="muted small">Found statically — each call checked against the current source, across repositories — before anything runs.</p>
           <ul className="mismatch-list">
-            {data.mismatches.map((m) => (
-              <li key={`${m.example}|${m.line}|${m.detail}`}>
-                <div className="mm-top">
-                  <a href={m.url} target="_blank" rel="noreferrer">
-                    <code>{short(m.example)}</code> line {m.line}
-                  </a>
-                  <span className="chip sev breaking">{KIND_LABEL[m.kind]}</span>
-                </div>
-                <div className="mm-heading muted small">{m.heading}</div>
-                <div className="mm-detail">
-                  <code>{m.call}</code> — {m.detail}
-                </div>
-              </li>
+            {counted.map((m) => (
+              <MismatchItem key={`${m.example}|${m.line}|${m.detail}`} m={m} />
             ))}
           </ul>
         </>
       )}
+      <LowerConfidenceSection findings={betaFindings} mismatches={betaMismatches} multi={data.repos.length > 1} />
 
       {failing.length > 0 && (
         <>

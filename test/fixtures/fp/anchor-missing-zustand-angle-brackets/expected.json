@@ -1,0 +1,37 @@
+{
+  "summary": "no finding anchor-missing above info at docs/reference/hooks/use-store.md:20, docs/reference/hooks/use-store.md:21",
+  "source": {
+    "repo": "pmndrs/zustand",
+    "sha": "d7a5583cffd80af515f7dfb69583c95cbdc9e2ce",
+    "urls": [
+      "https://github.com/pmndrs/zustand/blob/d7a5583cffd80af515f7dfb69583c95cbdc9e2ce/docs/reference/hooks/use-store.md#L20",
+      "https://github.com/pmndrs/zustand/blob/d7a5583cffd80af515f7dfb69583c95cbdc9e2ce/docs/reference/hooks/use-store.md#L21"
+    ]
+  },
+  "why": "The links are written <#using-scoped-(non-global)-vanilla-store-in-react>: in angle brackets the parentheses belong to the destination, and the headings exist (lines 397 and 611). Staleproof cut the destination at the first ')' and said the page had no such heading. The docs are built by pmndrs/docs (.github/workflows/docs.yml), whose heading ids keep punctuation (title.toLowerCase().replace(/\\s+|-+/g, '-')), so the links work there; on GitHub they do not jump. An info note that says so is right; a warning that the heading is missing is the false positive.",
+  "absent": [
+    {
+      "rule": "anchor-missing",
+      "file": "docs/reference/hooks/use-store.md",
+      "line": 20,
+      "message": "The heading “Using scoped (non-global) vanilla store in React” is on this page, but its GitHub anchor is `#using-scoped-non-global-vanilla-store-in-react`: `#using-scoped-(non-global)-vanilla-store-in-react` works only on a docs site whose slugger keeps punctuation.",
+      "maxSeverity": "info"
+    },
+    {
+      "rule": "anchor-missing",
+      "file": "docs/reference/hooks/use-store.md",
+      "line": 21,
+      "message": "The heading “Using dynamic scoped (non-global) vanilla stores in React” is on this page, but its GitHub anchor is `#using-dynamic-scoped-non-global-vanilla-stores-in-react`: `#using-dynamic-scoped-(non-global)-vanilla-stores-in-react` works only on a docs site whose slugger keeps punctuation.",
+      "maxSeverity": "info"
+    }
+  ],
+  "files": [
+    ".github/workflows/docs.yml",
+    ".gitignore",
+    "LICENSE",
+    "docs/reference/hooks/use-store.md",
+    "package.json",
+    "pnpm-workspace.yaml"
+  ],
+  "builtWith": "0.6.1"
+}

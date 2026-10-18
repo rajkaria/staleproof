@@ -1,0 +1,144 @@
+from setuptools import find_namespace_packages, setup
+
+
+def get_version() -> str:
+    rel_path = "src/huggingface_hub/__init__.py"
+    with open(rel_path, "r") as fp:
+        for line in fp.read().splitlines():
+            if line.startswith("__version__"):
+                delim = '"' if '"' in line else "'"
+                return line.split(delim)[1]
+    raise RuntimeError("Unable to find version string.")
+
+
+# hf-xet version used in both install_requires and extras["hf_xet"]
+HF_XET_VERSION = "hf-xet>=1.6.0,<2.0.0"
+
+install_requires = [
+    "click>=8.4.2,<9.0.0",  # 8.4.0/8.4.1 shipped a broken fish completion script
+    "filelock>=3.10.0",
+    "fsspec>=2023.5.0",
+    f"{HF_XET_VERSION}; platform_machine=='x86_64' or platform_machine=='amd64' or platform_machine=='AMD64' or platform_machine=='arm64' or platform_machine=='ARM64' or platform_machine=='aarch64'",
+    "httpx2>=2.0.0, <3",
+    "packaging>=20.9",
+    "pyyaml>=5.1",
+    "tomli>=1.1.0; python_version<'3.11'",  # stdlib `tomllib` from 3.11 onwards. Used to read `[tool.hf-jobs]` in UV scripts.
+    "tqdm>=4.42.1",
+    "typing-extensions>=4.1.0",  # to be able to import TypeAlias, dataclass_transform
+]
+
+extras = {}
+
+extras["oauth"] = [
+    "authlib>=1.8.0",  # first version supporting httpx2
+    "fastapi",
+    "itsdangerous",  # required for starlette SessionMiddleware
+]
+
+extras["torch"] = [
+    "torch",
+    "safetensors[torch]",
+]
+extras["fastai"] = [
+    "toml",
+    "fastai>=2.4",
+    "fastcore>=1.3.27",
+]
+
+extras["hf_xet"] = [HF_XET_VERSION]
+
+extras["mcp"] = ["mcp>=1.9.4, <2.0.0"]  # list_tools(cursor=...) only paginates correctly from 1.9.4
+
+extras["testing"] = (
+    extras["oauth"]
+    + [
+        "jedi",
+        "Jinja2",
+        "pytest>=8.4.2",  # we need https://github.com/pytest-dev/pytest/pull/12436
+        "pytest-cov",
+        "pytest-env",
+        "pytest-xdist",
+        "pytest-vcr",  # to mock Inference
+        "pytest-asyncio",  # for AsyncInferenceClient
+        # 16.2 clears fixture finalizers when rerunning a test whose fixture failed at setup.
+        # Without it, any flaky fixture (e.g. a 502 from hub-ci) makes the rerun itself crash on pytest>=9.
+        "pytest-rerunfailures>=16.2",  # to rerun flaky tests in CI
+        "pytest-mock",
+        "urllib3<2.0",  # VCR.py broken with urllib3 2.0 (see https://urllib3.readthedocs.io/en/stable/v2-migration-guide.html)
+        "soundfile",
+        "Pillow",
+        "numpy",  # for embeddings
+        "duckdb; python_version < '3.15'",  # for datasets SQL end-to-end tests (no 3.15 wheels yet)
+        "fastapi",  # To build the documentation
+    ]
+)
+
+extras["gradio"] = [
+    "gradio>=5.0.0",
+    "requests",  # see https://github.com/gradio-app/gradio/pull/11830
+]
+
+# Typing extra dependencies list is duplicated in `.pre-commit-config.yaml`
+# Please make sure to update the list there when adding a new typing dependency.
+extras["typing"] = [
+    "typing-extensions>=4.8.0",
+    "types-PyYAML",
+    "types-simplejson",
+    "types-toml",
+    "types-tqdm",
+    "types-urllib3",
+]
+
+extras["quality"] = [
+    "ruff>=0.9.0",
+    "mypy==1.15.0",
+    "libcst>=1.4.0",
+    "ty",
+]
+
+extras["all"] = extras["testing"] + extras["quality"] + extras["typing"]
+
+extras["dev"] = extras["all"]
+
+setup(
+    name="huggingface_hub",
+    version=get_version(),
+    author="Hugging Face, Inc.",
+    author_email="julien@huggingface.co",
+    description="Client library to download and publish models, datasets and other repos on the huggingface.co hub",
+    long_description=open("README.md", "r", encoding="utf-8").read(),
+    long_description_content_type="text/markdown",
+    keywords="model-hub machine-learning models natural-language-processing deep-learning pytorch pretrained-models",
+    license="Apache-2.0",
+    url="https://github.com/huggingface/huggingface_hub",
+    package_dir={"": "src"},
+    packages=find_namespace_packages("src"),
+    extras_require=extras,
+    entry_points={
+        "console_scripts": [
+            "hf=huggingface_hub.cli.hf:main",
+            "tiny-agents=huggingface_hub.inference._mcp.cli:app",
+        ],
+        "fsspec.specs": "hf=huggingface_hub.HfFileSystem",
+    },
+    python_requires=">=3.10.0",
+    install_requires=install_requires,
+    classifiers=[
+        "Intended Audience :: Developers",
+        "Intended Audience :: Education",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: Apache Software License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
+        "Programming Language :: Python :: 3.15",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    ],
+    include_package_data=True,
+    package_data={"huggingface_hub": ["py.typed"]},  # Needed for wheel installation
+)

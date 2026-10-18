@@ -49,7 +49,7 @@ describe('staleproof lint (claims engine)', () => {
       ...Array(17).fill('docs'),
       ...['docstring', 'docstring', 'config', 'config', 'config'],
     ]);
-    expect(result.summary).toMatchObject({ errors: 20, warnings: 6, infos: 3, files: 9 });
+    expect(result.summary).toMatchObject({ errors: 12, warnings: 3, infos: 14, files: 9, lowerConfidence: 11 });
     expect(result.version).toBe(1);
   });
 
@@ -107,7 +107,8 @@ describe('staleproof lint (claims engine)', () => {
   it('formats findings as text, JSON, SARIF, GitHub annotations and Markdown, with exit codes', () => {
     const text = formatLint(result, 'text');
     expect(text.indexOf('AI agent instructions')).toBeLessThan(text.indexOf('README and contributing guides'));
-    expect(text).toContain('20 errors, 6 warnings, 3 info in 11 files (9 files checked');
+    expect(text).toContain('12 errors, 3 warnings, 14 info in 11 files (9 files checked');
+    expect(text).toContain('; 11 of them lower confidence.');
     const json = JSON.parse(formatLint(result, 'json'));
     expect(json).toMatchObject({ version: 1, tool: { name: 'staleproof' }, repo: 'acme/claims-demo' });
     const sarif = JSON.parse(formatSarif(result));
@@ -115,7 +116,8 @@ describe('staleproof lint (claims engine)', () => {
     expect(sarif.runs[0].results).toHaveLength(29);
     expect(sarif.runs[0].results[0]).toMatchObject({
       ruleId: 'path-missing',
-      level: 'error',
+      // path-missing is beta (src/lint/maturity.ts): a note, lower confidence.
+      level: 'note',
       locations: [{ physicalLocation: { artifactLocation: { uri: '.cursor/rules/style.mdc' }, region: { startLine: 5, startColumn: 22 } } }],
     });
     expect(sarif.runs[0].tool.driver.rules.map((r: { id: string }) => r.id)).toEqual([
@@ -134,8 +136,8 @@ describe('staleproof lint (claims engine)', () => {
       'example-unknown-keyword',
     ]);
     const gh = formatGithub(result).split('\n');
-    expect(gh[0]).toBe('::error file=.cursor/rules/style.mdc,line=5,col=22,endLine=5,endColumn=42,title=Staleproof path-missing::`src/missing-style.ts` does not exist in the repository.');
-    expect(gh.some((l) => l.startsWith('::warning file=docs/guide.md,line=5'))).toBe(true);
+    expect(gh[0]).toBe('::notice file=.cursor/rules/style.mdc,line=5,col=22,endLine=5,endColumn=42,title=Staleproof path-missing (beta%2C lower confidence)::`src/missing-style.ts` does not exist in the repository.');
+    expect(gh.some((l) => l.startsWith('::notice file=docs/guide.md,line=5') && l.includes('title=Staleproof anchor-missing (beta%2C lower confidence)'))).toBe(true);
     const md = formatMarkdown(result);
     expect(md.split('\n')[0]).toBe('**AI agent instructions**');
     expect(md).toContain('[`README.md:7`](https://github.com/acme/claims-demo/blob/');
@@ -230,6 +232,7 @@ describe('lint building blocks', () => {
         'fail-on = "sometimes"',
         'fix-prs = true',
         'also-index = ["acme/docs"]',
+        'run-examples = false',
         '[audit]',
         'mention-owners = true',
       ].join('\n'),
@@ -241,7 +244,7 @@ describe('lint building blocks', () => {
       lint: { include: [], exclude: ['docs/archive/**'], agentFiles: ['prompts/*.md'] },
       rules: { 'env-undocumented': 'off' },
       hooks: { stop: 'warn' },
-      app: { comment: 'findings', fixPrs: true, alsoIndex: ['acme/docs'] },
+      app: { comment: 'findings', fixPrs: true, alsoIndex: ['acme/docs'], runExamples: false },
       audit: { mentionOwners: true },
       warnings: [
         '.staleproof.toml: unknown key colour; ignored',

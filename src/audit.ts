@@ -5,6 +5,8 @@ import type { MismatchKind } from './indexer/signature.js';
 import { lineUrl } from './pr/predict.js';
 import { JS_LANGS } from './indexer/docs.js';
 import { INDEX_VERSION } from './indexer/index.js';
+import type { RuleSetting } from './indexer/repo-config.js';
+import { exampleKindCounts, storedLowerConfidence } from './lint/maturity.js';
 import { runExampleTool } from './tools/run-example.js';
 import { result, Tracer, type ToolContext, type ToolDef, type ToolResult } from './tools/types.js';
 
@@ -24,6 +26,8 @@ export interface AuditMismatch {
   detail: string;
   call: string;
   symbol: string;
+  /** A static check of a beta rule (src/lint/maturity.ts): listed apart, never counted in the score. */
+  lowerConfidence?: true;
 }
 
 export interface UndocumentedSymbol {
@@ -62,6 +66,8 @@ export interface FindingCounts {
   infos: number;
   byRule: Partial<Record<RuleId, number>>;
   bySurface: Partial<Record<Surface, number>>;
+  /** Findings of beta rules (counted in `infos` too, never deducted); absent when none. */
+  lowerConfidence?: number;
 }
 
 export interface AuditData {
@@ -203,8 +209,13 @@ export function scoreAudit(
 /** The audit's sentence about examples: never "All 0" when no example calls the code. */
 export function examplesSentence(d: Pick<AuditData, 'examples' | 'mismatches'>): string {
   const { linked, mismatched, total } = d.examples;
-  if (mismatched) return `${mismatched} of ${linked} examples that call the code no longer fit it (${d.mismatches.length} line${d.mismatches.length === 1 ? '' : 's'}).`;
+  // Lines from beta checks (src/lint/maturity.ts) are listed apart and not counted: say so, never "all fit" over them.
+  const lower = d.mismatches.filter((m) => m.lowerConfidence).length;
+  const beta = lower ? ` ${lower} line${lower === 1 ? '' : 's'} from beta checks ${lower === 1 ? 'is' : 'are'} listed apart, not counted.` : '';
+  const lines = d.mismatches.length - lower;
+  if (mismatched) return `${mismatched} of ${linked} examples that call the code no longer fit it (${lines} line${lines === 1 ? '' : 's'}).${beta}`;
   if (!linked) return total ? `No docs example calls the code (${total} example${total === 1 ? '' : 's'} read), so none was checked against it.` : 'The docs have no code examples to check.';
+  if (lower) return `No example that calls the code is known not to fit it (${linked} checked);${beta}`;
   return linked === 1 ? 'The 1 example that calls the code fits it.' : `All ${linked} examples that call the code fit it.`;
 }
 
@@ -261,7 +272,7 @@ export const auditTool: ToolDef<{ repos?: string[]; limit?: number }, AuditData>
 
 const SURFACE_ORDER: Record<Surface, number> = { agent: 0, readme: 1, docs: 2, example: 3, docstring: 4, config: 5 };
 
-type FindingRow = Omit<AuditFinding, 'evidence' | 'fix' | 'heading'> & { evidence: string | null; fix: string | null; heading: string | null };
+type FindingRow = Omit<AuditFinding, 'evidence' | 'fix' | 'heading' | 'lowerConfidence'> & { evidence: string | null; fix: string | null; heading: string | null; lowerConfidence?: boolean | null };
 
 function parseJson<T>(s: string | null | undefined): T | undefined {
   if (!s) return undefined;
@@ -272,12 +283,23 @@ function parseJson<T>(s: string | null | undefined): T | undefined {
   }
 }
 
+/**
+ * A mismatch of a beta rule (src/lint/maturity.ts) is listed (lowerConfidence) but never counted in the score, unless the
+ * docs' repository opts the rule in at warning or error in `[rules]` (stored on its Repo node at index time; graphs
+ * indexed before 0.8 have none, so maturity alone decides).
+ */
+export function lowerMismatch(kind: string, settings?: Record<string, RuleSetting>): boolean {
+  return !exampleKindCounts(kind, settings);
+}
+
 /** Finding nodes as Findings, AI agent instruction files first, then by repository, path and line. */
 export function auditFindingsOf(rows: FindingRow[]): { findings: AuditFinding[]; counts: FindingCounts } {
-  const findings: AuditFinding[] = rows.map(({ evidence, fix, heading, ...f }) => {
+  const findings: AuditFinding[] = rows.map(({ evidence, fix, heading, lowerConfidence, ...f }) => {
     const ev = parseJson<Finding['evidence']>(evidence);
     const fx = parseJson<Finding['fix']>(fix);
-    return { ...f, ...(ev?.looked ? { evidence: ev } : {}), ...(fx ? { fix: fx } : {}), ...(heading ? { heading } : {}) };
+    // Beta rules (src/lint/maturity.ts) are listed apart and never lower the score; older graphs fall back to maturity.
+    const lower = storedLowerConfidence(f.rule, lowerConfidence);
+    return { ...f, ...(lower ? { severity: 'info' as const, lowerConfidence: true as const } : {}), ...(ev?.looked ? { evidence: ev } : {}), ...(fx ? { fix: fx } : {}), ...(heading ? { heading } : {}) };
   });
   findings.sort(
     (a, b) =>
@@ -294,6 +316,7 @@ export function auditFindingsOf(rows: FindingRow[]): { findings: AuditFinding[];
     else counts.infos++;
     counts.byRule[f.rule] = (counts.byRule[f.rule] ?? 0) + 1;
     counts.bySurface[f.surface] = (counts.bySurface[f.surface] ?? 0) + 1;
+    if (f.lowerConfidence) counts.lowerConfidence = (counts.lowerConfidence ?? 0) + 1;
   }
   return { findings, counts };
 }
@@ -312,10 +335,13 @@ export async function auditDocs(ctx: ToolContext, opts: AuditOptions = {}): Prom
   const examples = (await tracer.run<{ id: string; lang: string; url: string; repo: string; directive: string; uses: number }>(Q.auditExamples, { repos })).rows;
   const exampleIds = [...new Set(examples.map((e) => e.id))];
 
-  const mismatches = (await tracer.run<AuditMismatch & { symbolRepo: string }>(Q.auditMismatches, { repos })).rows.map(({ symbolRepo: _, ...m }) => ({
-    ...m,
-    url: lineUrl(m.url, m.line),
-  }));
+  const mismatches: AuditMismatch[] = (await tracer.run<AuditMismatch & { symbolRepo: string; ruleSettings: string | null }>(Q.auditMismatches, { repos })).rows.map(
+    ({ symbolRepo: _, ruleSettings, ...m }) => ({
+      ...m,
+      url: lineUrl(m.url, m.line),
+      ...(lowerMismatch(m.kind, parseJson<Record<string, RuleSetting>>(ruleSettings)) ? { lowerConfidence: true as const } : {}),
+    }),
+  );
 
   if (opts.run && opts.run > 0) {
     const mismatched = new Set(mismatches.map((m) => m.example));
@@ -391,9 +417,10 @@ export async function auditDocs(ctx: ToolContext, opts: AuditOptions = {}): Prom
     total: exampleIds.length,
     python: new Set(examples.filter((e) => e.lang === 'python').map((e) => e.id)).size,
     linked: new Set(examples.filter((e) => e.uses > 0).map((e) => e.id)).size,
-    mismatched: new Set(mismatches.map((m) => m.example)).size,
+    mismatched: new Set(mismatches.filter((m) => !m.lowerConfidence).map((m) => m.example)).size,
   };
-  const mismatchedIds = new Set(mismatches.map((m) => m.example));
+  // Failing runs of examples not already counted as mismatched (a beta mismatch is not counted, so its failing run is).
+  const mismatchedIds = new Set(mismatches.filter((m) => !m.lowerConfidence).map((m) => m.example));
   const failingOnly = runs.filter((r) => (r.status === 'fail' || r.status === 'timeout') && !mismatchedIds.has(r.example)).length;
   // Docs references linted at index time (Finding nodes, index version 4); examples are counted above.
   const lint = auditFindingsOf((await tracer.run<FindingRow>(Q.auditFindings, { repos })).rows.filter((r) => !r.rule.startsWith('example-')));

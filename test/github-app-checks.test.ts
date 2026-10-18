@@ -30,6 +30,12 @@ import { finding, prFindings } from './fixtures/github-app/fake-github.js';
 const outcome = (o: Partial<CheckOutcome> = {}): CheckOutcome => ({ report: `${COMMENT_MARKER}\n### Staleproof: x`, predicted: 0, sections: 0, stale: 0, ...o });
 
 describe('check run output', () => {
+  it('marks beta findings lower confidence and never fails on them', () => {
+    const beta = finding(9, { rule: 'env-unused', severity: 'info', lowerConfidence: true });
+    expect(annotationsOf([beta])[0]).toMatchObject({ annotation_level: 'notice', title: expect.stringMatching(/^env-unused \(beta, lower confidence\): /) });
+    expect(conclusionOf(outcome({ newFindings: prFindings([beta]) }), 'findings')).toBe('neutral');
+  });
+
   it('annotates each new finding on its line, with columns only on one-line spans', () => {
     const fix: Fix = { description: 'Rename to `npm run lint-docs`', edits: [], verified: true };
     const [a, b, c] = annotationsOf([
@@ -143,7 +149,7 @@ describe('comment policy', () => {
 describe('[app] config', () => {
   it('fills the defaults and keeps what the repository sets', () => {
     expect(resolveAppConfig(undefined)).toEqual(APP_DEFAULTS);
-    expect(APP_DEFAULTS).toEqual({ comment: 'findings', failOn: 'never', suggestions: true, drafts: false, fixPrs: false, auditIssue: false, alsoIndex: [] });
+    expect(APP_DEFAULTS).toEqual({ comment: 'findings', failOn: 'never', suggestions: true, drafts: false, fixPrs: false, auditIssue: false, alsoIndex: [], runExamples: true });
     expect(resolveAppConfig({ comment: 'always', failOn: 'findings', suggestions: false, drafts: true, fixPrs: true, auditIssue: true, alsoIndex: ['acme/docs'] })).toEqual({
       comment: 'always',
       failOn: 'findings',
@@ -152,6 +158,7 @@ describe('[app] config', () => {
       fixPrs: true,
       auditIssue: true,
       alsoIndex: ['acme/docs'],
+      runExamples: true,
     });
   });
 });

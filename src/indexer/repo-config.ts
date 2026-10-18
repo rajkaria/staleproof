@@ -61,6 +61,8 @@ export interface AppConfig {
   fixPrs?: boolean;
   auditIssue?: boolean;
   alsoIndex?: string[];
+  /** The GitHub App runs the affected docs examples before and after a pull request in a sandbox (default true where the server can). */
+  runExamples?: boolean;
 }
 
 export interface AuditConfig {
@@ -156,6 +158,7 @@ export function parseRepoConfig(text: string, file: string): RepoConfig {
     'fix-prs': ['fixPrs', 'boolean'],
     'audit-issue': ['auditIssue', 'boolean'],
     'also-index': ['alsoIndex', 'strings'],
+    'run-examples': ['runExamples', 'boolean'],
   });
   if (app) config.app = app;
   const audit = readTable<AuditConfig>(table, 'audit', file, warnings, { 'mention-owners': ['mentionOwners', 'boolean'] });

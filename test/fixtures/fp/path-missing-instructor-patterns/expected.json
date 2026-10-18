@@ -1,0 +1,37 @@
+{
+  "summary": "no finding path-missing at CLAUDE.md:75, CLAUDE.md:138",
+  "source": {
+    "repo": "567-labs/instructor",
+    "sha": "035c77b7b04dbbf70ae4457eb102038907b5a2a4",
+    "urls": [
+      "https://github.com/567-labs/instructor/blob/035c77b7b04dbbf70ae4457eb102038907b5a2a4/CLAUDE.md#L75",
+      "https://github.com/567-labs/instructor/blob/035c77b7b04dbbf70ae4457eb102038907b5a2a4/CLAUDE.md#L138"
+    ]
+  },
+  "why": "Line 75: `tests/llm/test_provider/evals/` is a pattern (test_<provider>): tests/llm/test_gemini/evals and tests/llm/test_writer/evals exist. Line 138: `docs/integrations/your_provider.md` is the page the step tells the contributor to create. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "path-missing",
+      "file": "CLAUDE.md",
+      "line": 75,
+      "message": "`tests/llm/test_provider/evals` does not exist in the repository."
+    },
+    {
+      "rule": "path-missing",
+      "file": "CLAUDE.md",
+      "line": 138,
+      "message": "`docs/integrations/your_provider.md` does not exist in the repository."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "CLAUDE.md",
+    "LICENSE",
+    "docs/integrations/anthropic.md",
+    "mkdocs.yml",
+    "pyproject.toml",
+    "tests/llm/test_gemini/evals/__init__.py",
+    "tests/llm/test_writer/evals/__init__.py"
+  ],
+  "builtWith": "0.7.0"
+}

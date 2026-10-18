@@ -33,6 +33,8 @@ export function summarize(findings: readonly Finding[], files: number, ms: numbe
     else s.infos++;
     s.byRule[f.rule] = (s.byRule[f.rule] ?? 0) + 1;
     s.bySurface[f.surface] = (s.bySurface[f.surface] ?? 0) + 1;
+    // As lintRepo's summary: beta rules' findings (src/lint/maturity.ts), counted in infos too; absent when none.
+    if (f.lowerConfidence) s.lowerConfidence = (s.lowerConfidence ?? 0) + 1;
   }
   return s;
 }

@@ -84,7 +84,7 @@ describe('link destinations (CommonMark)', () => {
 describe('anchors under another slugger (zustand)', () => {
   let dir: string;
   it('lint reports the other-slugger anchors at info, the missing one at the rule level', async () => {
-    const r = await lintRepo({ dir, rules: ['anchor-missing'], examples: false });
+    const r = await lintRepo({ dir, rules: ['anchor-missing'], examples: false, config: { ignore: [], skipExamples: [], rules: { 'anchor-missing': 'warning' } } });
     expect(r.findings.map((f) => `${f.path}:${f.line} ${f.severity}`)).toEqual([
       'docs/reference/apis/create-store.md:3 info',
       'docs/reference/hooks/use-store.md:4 info',
@@ -97,6 +97,8 @@ describe('anchors under another slugger (zustand)', () => {
     // A configured level caps it; it never raises an info.
     const strict = await lintRepo({ dir, rules: ['anchor-missing'], examples: false, config: { rules: { 'anchor-missing': 'error' } } as never });
     expect(strict.findings.map((f) => f.severity)).toEqual(['info', 'info', 'info', 'error', 'info', 'info']);
+    const byDefault = await lintRepo({ dir, rules: ['anchor-missing'], examples: false });
+    expect(byDefault.findings.every((f) => f.severity === 'info' && f.lowerConfidence)).toBe(true);
   });
   beforeAll(async () => {
     dir = await mkdtemp(join(tmpdir(), 'staleproof-links-'));
@@ -153,17 +155,18 @@ describe('anchors under another slugger (zustand)', () => {
       message:
         'The heading “I’ve updated the state, but the screen doesn’t update” is on this page, but its GitHub anchor is `#ive-updated-the-state-but-the-screen-doesnt-update`: ' +
         '`#i’ve-updated-the-state,-but-the-screen-doesn’t-update` works only on a docs site whose slugger keeps punctuation.',
-      candidates: ['ive-updated-the-state-but-the-screen-doesnt-update'],
+      // No fix: the GitHub anchor would break the link on the site that resolves it (an empty list tells the fixer).
+      candidates: [],
     });
     expect(out[0]!.span).toMatchObject({ line: 3, column: CREATE_STORE_23.indexOf('#') + 1, endColumn: CREATE_STORE_23.length });
   });
 
   it('the full angle-bracket anchors are judged (not cut at the first parenthesis); an ordinary missing anchor is unchanged', async () => {
     const out = await check('docs/reference/hooks/use-store.md');
-    expect(out.map((f) => [f.span.line, f.subject, f.severity ?? 'rule default', f.candidates?.length === 1 ? f.candidates[0] : '…'])).toEqual([
-      [4, '#using-scoped-(non-global)-vanilla-store-in-react', 'info', 'using-scoped-non-global-vanilla-store-in-react'],
-      [5, '#using-dynamic-scoped-(non-global)-vanilla-stores-in-react', 'info', 'using-dynamic-scoped-non-global-vanilla-stores-in-react'],
-      [6, '#no-such-heading', 'rule default', '…'],
+    expect(out.map((f) => [f.span.line, f.subject, f.severity ?? 'rule default', f.candidates?.length ?? 0])).toEqual([
+      [4, '#using-scoped-(non-global)-vanilla-store-in-react', 'info', 0],
+      [5, '#using-dynamic-scoped-(non-global)-vanilla-stores-in-react', 'info', 0],
+      [6, '#no-such-heading', 'rule default', 4],
     ]);
     expect(out[2]!.message).toBe('This page has no heading `#no-such-heading`.');
     expect(out[2]).not.toHaveProperty('severity');
@@ -187,19 +190,13 @@ describe('anchors under another slugger (zustand)', () => {
     expect(out[1]!.subject).toBe('docs/reference/apis/create-store.md#i’ve-updated-the-state,-but-the-screen-doesn’t-update');
   });
 
-  it('offers the GitHub anchor as a verified fix, inside the angle brackets too', async () => {
+  it('offers no fix for an anchor another docs site resolves: the GitHub anchor would break it there', async () => {
     const result = await lintRepo({ dir, rules: ['anchor-missing'], examples: false });
     const fixed = await addFixes(result, worktreeTree(dir));
-    const byLine = (path: string, line: number) => fixed.findings.find((f) => f.path === path && f.line === line)?.fix;
-    expect(byLine('docs/reference/apis/create-store.md', 3)).toMatchObject({
-      description: "Rename to `#ive-updated-the-state-but-the-screen-doesnt-update` (the heading's GitHub anchor)",
-      edits: [{ line: 3, column: CREATE_STORE_23.indexOf('#') + 2, endColumn: CREATE_STORE_23.length, newText: 'ive-updated-the-state-but-the-screen-doesnt-update' }],
-      verified: true,
-    });
-    expect(byLine('docs/reference/hooks/use-store.md', 4)).toMatchObject({
-      edits: [{ column: USE_STORE_20.indexOf('#') + 2, endColumn: USE_STORE_20.lastIndexOf('>') + 1, newText: 'using-scoped-non-global-vanilla-store-in-react' }],
-      verified: true,
-    });
-    expect(byLine('docs/reference/middlewares/devtools.md', 4)).toMatchObject({ edits: [{ newText: 'ive-updated-the-state-but-the-screen-doesnt-update' }], verified: true });
+    const byLine = (path: string, line: number) => fixed.findings.find((f) => f.path === path && f.line === line);
+    for (const [path, line] of [['docs/reference/apis/create-store.md', 3], ['docs/reference/hooks/use-store.md', 4], ['docs/reference/middlewares/devtools.md', 4]] as const) {
+      expect(byLine(path, line)?.severity, `${path}:${line}`).toBe('info');
+      expect(byLine(path, line)?.fix, `${path}:${line}`).toBeUndefined();
+    }
   });
 });

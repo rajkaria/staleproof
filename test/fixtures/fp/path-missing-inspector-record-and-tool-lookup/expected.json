@@ -1,0 +1,40 @@
+{
+  "summary": "no finding path-missing at AGENTS.md:124, AGENTS.md:319",
+  "source": {
+    "repo": "modelcontextprotocol/inspector",
+    "sha": "074b8108f340590268f2900741403755e923a11c",
+    "urls": [
+      "https://github.com/modelcontextprotocol/inspector/blob/074b8108f340590268f2900741403755e923a11c/AGENTS.md#L124",
+      "https://github.com/modelcontextprotocol/inspector/blob/074b8108f340590268f2900741403755e923a11c/AGENTS.md#L319"
+    ]
+  },
+  "why": "Line 124 is a table row recording that `.github/dependabot.yml` was deleted (#2235). Line 319 says where Copilot CLI looks for skills (`.github/skills/`), not that this repository has it. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "path-missing",
+      "file": "AGENTS.md",
+      "line": 124,
+      "message": "`.github/dependabot.yml` does not exist in the repository."
+    },
+    {
+      "rule": "path-missing",
+      "file": "AGENTS.md",
+      "line": 124,
+      "message": "`.github/workflows/dependency-refresh.yml` does not exist in the repository."
+    },
+    {
+      "rule": "path-missing",
+      "file": "AGENTS.md",
+      "line": 319,
+      "message": "`.github/skills` does not exist in the repository."
+    }
+  ],
+  "files": [
+    ".github/workflows/dco.yml",
+    ".gitignore",
+    "AGENTS.md",
+    "LICENSE",
+    "package.json"
+  ],
+  "builtWith": "0.7.0"
+}

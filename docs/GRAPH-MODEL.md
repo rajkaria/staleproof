@@ -735,8 +735,10 @@ ORDER BY name
 MATCH (e:CodeExample)-[m:MISMATCH]->(s:Symbol)
 WHERE e.status = 'live' AND (e.repo IN $repos OR s.repo IN $repos)
 OPTIONAL MATCH (e)-[:IN_SECTION]->(sec:DocSection)
+OPTIONAL MATCH (dr:Repo {name: e.repo})
 RETURN e.id AS example, e.url AS url, e.repo AS repo, e.path AS path, coalesce(sec.heading_path, e.path) AS heading,
-       m.line AS line, m.kind AS kind, m.detail AS detail, m.text AS call, s.qualname AS symbol, s.repo AS symbolRepo
+       m.line AS line, m.kind AS kind, m.detail AS detail, m.text AS call, s.qualname AS symbol, s.repo AS symbolRepo,
+       dr.rule_settings AS ruleSettings
 ORDER BY repo, path, line
 ```
 
@@ -785,8 +787,16 @@ WHERE f.repo IN $repos
 OPTIONAL MATCH (f)-[:IN_SECTION]->(d:DocSection)
 RETURN f.rule AS rule, f.severity AS severity, f.message AS message, f.repo AS repo, f.path AS path, f.line AS line, f.column AS column,
        f.endLine AS endLine, f.endColumn AS endColumn, f.surface AS surface, f.subject AS subject, f.evidence AS evidence, f.fix AS fix,
-       f.fingerprint AS fingerprint, d.heading_path AS heading
+       f.fingerprint AS fingerprint, f.lowerConfidence AS lowerConfidence, d.heading_path AS heading
 ORDER BY repo, path, line, column
+```
+
+**`repoRuleSettings`** — The `[rules]` each repository had when it was indexed (JSON), so a check counts a beta example rule the repository opts in.
+
+```cypher
+MATCH (r:Repo)
+WHERE r.name IN $repos
+RETURN r.name AS name, r.rule_settings AS ruleSettings
 ```
 
 **`repoSymbols`** — List the live symbols of a repository.

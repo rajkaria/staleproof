@@ -117,7 +117,7 @@ describe('staleproof lsp (in-process protocol)', () => {
     expect(c.referencesProvider).toBe(true);
     expect(c.codeLensProvider).toBeTruthy();
     expect(c.codeActionProvider).toMatchObject({ codeActionKinds: ['quickfix', 'source.fixAll.staleproof'] });
-    expect(c.executeCommandProvider?.commands).toEqual(['staleproof.fixAll', 'staleproof.audit', 'staleproof.openReferences']);
+    expect(c.executeCommandProvider?.commands).toEqual(['staleproof.fixAll', 'staleproof.audit', 'staleproof.openReferences', 'staleproof.reportFalsePositive']);
     expect(c.textDocumentSync).toMatchObject({ openClose: true, change: 2 });
   });
 
@@ -208,7 +208,7 @@ describe('staleproof lsp (in-process protocol)', () => {
     const ds = await open('AGENTS.md');
     const d = ds.find((x) => x.code === 'path-missing')!;
     const actions = (await t.client.sendRequest(CodeActionRequest.type, { textDocument: { uri: uri('AGENTS.md') }, range: d.range, context: { diagnostics: [d] } })) as CodeAction[];
-    expect(actions.map((a) => a.title)).toEqual(['Replace with `pkg/client.py`', 'Ignore path-missing here (staleproof: ignore)']);
+    expect(actions.map((a) => a.title)).toEqual(['Replace with `pkg/client.py`', 'Ignore path-missing here (staleproof: ignore)', 'Staleproof: report a false positive (path-missing)']);
     expect(actions[0]!.isPreferred).toBe(true);
     const fixEdit = actions[0]!.edit!.documentChanges![0] as TextDocumentEdit;
     expect(fixEdit.textDocument).toEqual({ uri: uri('AGENTS.md'), version: 1 });
@@ -241,6 +241,20 @@ describe('staleproof lsp (in-process protocol)', () => {
     const e = edits(skip)[0]!;
     expect(e.newText).toBe('<!-- staleproof: skip -->\n');
     expect(texts.get('README.md')!.text.split('\n')[e.range.start.line]).toBe('```python');
+  });
+
+  it('offers "report a false positive" on every diagnostic, opening the prefilled issue form', async () => {
+    // README.md is open with an unsaved edit: use what was published for it last (re-opening would drop the edit).
+    const ds = t.published.filter((p) => p.uri === uri('README.md')).at(-1)!.diagnostics;
+    const d = ds.find((x) => x.code === 'anchor-missing')!;
+    const actions = (await t.client.sendRequest(CodeActionRequest.type, { textDocument: { uri: uri('README.md') }, range: d.range, context: { diagnostics: [d] } })) as CodeAction[];
+    const report = actions.find((a) => a.command?.command === 'staleproof.reportFalsePositive')!;
+    expect(report.title).toBe('Staleproof: report a false positive (anchor-missing)');
+    const url = new URL(report.command!.arguments![0] as string);
+    expect(url.searchParams.get('template')).toBe('false-positive.yml');
+    expect(url.searchParams.get('rule')).toBe('anchor-missing');
+    expect(url.searchParams.get('location')).toBe(`README.md:${d.range.start.line + 1}`);
+    expect(url.searchParams.get('text')).toContain('#configuration');
   });
 
   it('fix all in file: one edit with every verified fix, applied through the client', async () => {

@@ -70,6 +70,11 @@ export interface Finding {
   fix?: Fix;
   /** Stable across edits elsewhere in the file: rule, path, subject and occurrence, never the line. */
   fingerprint: string;
+  /**
+   * From a beta rule the config has not opted in (src/lint/maturity.ts): reported at info, listed apart,
+   * never fails a check or lowers a score. Absent otherwise.
+   */
+  lowerConfidence?: true;
 }
 
 export interface LintSummary {
@@ -81,6 +86,8 @@ export interface LintSummary {
   byRule: Partial<Record<RuleId, number>>;
   bySurface: Partial<Record<Surface, number>>;
   ms: number;
+  /** Findings marked `lowerConfidence` (counted in `infos` too); absent when none. */
+  lowerConfidence?: number;
 }
 
 export interface LintResult {

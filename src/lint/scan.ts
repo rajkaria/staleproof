@@ -182,10 +182,20 @@ function scanMarkdownClaims(path: string, text: string): ScannedDoc {
   }
   let fence: { char: string; len: number; fence: Fence } | null = null;
   let inComment = false;
+  // An MDX comment over several lines (`{/* … [link](#x) … */}`) renders nothing either (zod's api.mdx).
+  const mdx = /\.mdx$/i.test(path);
+  let inMdxComment = false;
 
   for (; i < lines.length; i++) {
     const raw = lines[i]!;
     const lineNo = i + 1;
+
+    if (inMdxComment) {
+      const close = /\*\/\s*\}/.exec(raw);
+      if (!close) continue;
+      inMdxComment = false;
+      if (!raw.slice(close.index + close[0].length).trim()) continue;
+    }
 
     if (fence) {
       if (new RegExp(`^\\s*\\${fence.char}{${fence.len},}\\s*$`).test(raw)) {
@@ -217,6 +227,11 @@ function scanMarkdownClaims(path: string, text: string): ScannedDoc {
       inComment = true;
       line = line.slice(0, open);
     }
+    const mdxOpen = mdx ? /\{\s*\/\*/.exec(line) : null;
+    if (mdxOpen) {
+      inMdxComment = true;
+      line = line.slice(0, mdxOpen.index);
+    }
 
     const fenceOpen = /^(\s*)(`{3,}|~{3,})\s*([^\s`{]*)(.*)$/.exec(line);
     if (fenceOpen && !(fenceOpen[2]![0] === '`' && fenceOpen[4]!.includes('`'))) {
@@ -244,8 +259,9 @@ function scanMarkdownClaims(path: string, text: string): ScannedDoc {
     }
     const def = referenceDestination(masked);
     if (def) doc.links.push({ kind: 'reference', text: def.text, line: lineNo, column: def.start + 1, endColumn: def.end + 1 });
-    // The attribute's own quote closes it: `href="it's.md"` keeps its apostrophe.
-    for (const m of masked.matchAll(/\b(?:href|src)=(?:"([^"]+)"|'([^']+)')/g)) {
+    // The attribute's own quote closes it: `href="it's.md"` keeps its apostrophe. A Vue binding
+    // (`:href="dep.funding"`, `v-bind:src`) holds an expression, not a link.
+    for (const m of masked.matchAll(/(?<![:\w.-])(?:href|src)=(?:"([^"]+)"|'([^']+)')/g)) {
       const target = m[1] ?? m[2]!;
       const column = m.index! + m[0].indexOf(target) + 1;
       doc.links.push({ kind: 'html', text: target, line: lineNo, column, endColumn: column + target.length });

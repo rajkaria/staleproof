@@ -1,0 +1,27 @@
+{
+  "summary": "no finding command-missing at AGENTS.md:536",
+  "source": {
+    "repo": "modelcontextprotocol/inspector",
+    "sha": "074b8108f340590268f2900741403755e923a11c",
+    "urls": [
+      "https://github.com/modelcontextprotocol/inspector/blob/074b8108f340590268f2900741403755e923a11c/AGENTS.md#L536"
+    ]
+  },
+  "why": "\"There is deliberately **no `npm run ci`**\": a negated claim, accurate at the sha. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "command-missing",
+      "file": "AGENTS.md",
+      "line": 536,
+      "message": "`ci` is not a script in package.json."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "AGENTS.md",
+    "LICENSE",
+    "clients/web/package.json",
+    "package.json"
+  ],
+  "builtWith": "0.7.0"
+}

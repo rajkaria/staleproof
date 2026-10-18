@@ -1,0 +1,28 @@
+{
+  "summary": "no finding anchor-missing at packages/docs/content/api.mdx:1898",
+  "source": {
+    "repo": "colinhacks/zod",
+    "sha": "680d19f7d1e042e55934209caeb79bc843b94f44",
+    "urls": [
+      "https://github.com/colinhacks/zod/blob/680d19f7d1e042e55934209caeb79bc843b94f44/packages/docs/content/api.mdx#L1898"
+    ]
+  },
+  "why": "The link [`.or` method](#or) is inside an MDX comment ({/* ... */}, line 1898): it is not rendered, so nothing links to #or.",
+  "absent": [
+    {
+      "rule": "anchor-missing",
+      "file": "packages/docs/content/api.mdx",
+      "line": 1898,
+      "message": "This page has no heading `#or`."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "package.json",
+    "packages/docs/.gitignore",
+    "packages/docs/content/api.mdx",
+    "packages/docs/package.json"
+  ],
+  "builtWith": "0.6.1"
+}

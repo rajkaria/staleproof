@@ -1,0 +1,29 @@
+{
+  "summary": "no finding anchor-missing above info at docs/reference/apis/create-store.md:23",
+  "source": {
+    "repo": "pmndrs/zustand",
+    "sha": "d7a5583cffd80af515f7dfb69583c95cbdc9e2ce",
+    "urls": [
+      "https://github.com/pmndrs/zustand/blob/d7a5583cffd80af515f7dfb69583c95cbdc9e2ce/docs/reference/apis/create-store.md#L23"
+    ]
+  },
+  "why": "The heading 'I’ve updated the state, but the screen doesn’t update' exists (line 343). zustand's docs are built by pmndrs/docs (.github/workflows/docs.yml), whose heading ids keep punctuation: title.toLowerCase().replace(/\\s+|-+/g, '-') gives exactly #i’ve-updated-the-state,-but-the-screen-doesn’t-update. On GitHub the link does not jump, so an info note saying so is right; a warning that the page has no such heading is the false positive.",
+  "absent": [
+    {
+      "rule": "anchor-missing",
+      "file": "docs/reference/apis/create-store.md",
+      "line": 23,
+      "message": "The heading “I’ve updated the state, but the screen doesn’t update” is on this page, but its GitHub anchor is `#ive-updated-the-state-but-the-screen-doesnt-update`: `#i’ve-updated-the-state,-but-the-screen-doesn’t-update` works only on a docs site whose slugger keeps punctuation.",
+      "maxSeverity": "info"
+    }
+  ],
+  "files": [
+    ".github/workflows/docs.yml",
+    ".gitignore",
+    "LICENSE",
+    "docs/reference/apis/create-store.md",
+    "package.json",
+    "pnpm-workspace.yaml"
+  ],
+  "builtWith": "0.6.1"
+}

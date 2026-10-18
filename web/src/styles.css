@@ -187,6 +187,10 @@ pre code {
 .small {
   font-size: 0.85em;
 }
+/* "False positive?" after a finding's message (CheckResults, Audit). */
+.fp-link {
+  white-space: nowrap;
+}
 .center {
   text-align: center;
 }

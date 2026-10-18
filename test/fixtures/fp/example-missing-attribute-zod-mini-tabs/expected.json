@@ -1,0 +1,40 @@
+{
+  "summary": "no finding example-missing-attribute at packages/docs/content/api.mdx:854, packages/docs/content/api.mdx:855",
+  "source": {
+    "repo": "colinhacks/zod",
+    "sha": "680d19f7d1e042e55934209caeb79bc843b94f44",
+    "urls": [
+      "https://github.com/colinhacks/zod/blob/680d19f7d1e042e55934209caeb79bc843b94f44/packages/docs/content/api.mdx#L854",
+      "https://github.com/colinhacks/zod/blob/680d19f7d1e042e55934209caeb79bc843b94f44/packages/docs/content/api.mdx#L855"
+    ]
+  },
+  "why": "The page shows each API in two tabs, 'Zod' (import * as z from \"zod\") and 'Zod Mini' (import * as z from \"zod/mini\"). Lines 854-855 are in a Zod Mini tab, where z.minimum and z.maximum exist; the page's cumulative bindings gave z the classic import of the other tab. Known since 0.3 (25 findings on this page and core.mdx).",
+  "absent": [
+    {
+      "rule": "example-missing-attribute",
+      "file": "packages/docs/content/api.mdx",
+      "line": 854,
+      "message": "`zod` has no `minimum`."
+    },
+    {
+      "rule": "example-missing-attribute",
+      "file": "packages/docs/content/api.mdx",
+      "line": 855,
+      "message": "`zod` has no `maximum`."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "package.json",
+    "packages/docs/.gitignore",
+    "packages/docs/content/api.mdx",
+    "packages/docs/package.json",
+    "packages/zod/.gitignore",
+    "packages/zod/package.json",
+    "packages/zod/src/index.ts",
+    "packages/zod/src/v4/classic/external.ts",
+    "packages/zod/src/v4/classic/schemas.ts"
+  ],
+  "builtWith": "0.6.1"
+}

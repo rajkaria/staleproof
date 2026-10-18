@@ -206,6 +206,20 @@ export const DOCS: DocEntry[] = [
     generated: true,
   },
   {
+    slug: 'false-positives',
+    file: 'false-positives.md',
+    title: 'False positives',
+    summary: 'Report a wrong finding in one click; every report becomes a regression fixture, and rules earn trust before they can fail a check.',
+    group: 'Reference',
+  },
+  {
+    slug: 'drift-hall',
+    file: 'drift-hall.md',
+    title: 'Drift Hall',
+    summary: 'Staleproof run on about sixty popular repositories it was never tuned on, every finding hand-checked at a pinned commit: the confirmed drift with links to the lines, the false positives counted by rule and cause, the fixes offered upstream, and how to reproduce it.',
+    group: 'Reference',
+  },
+  {
     slug: 'tools',
     file: 'tools.md',
     title: 'Tools reference',

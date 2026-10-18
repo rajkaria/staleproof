@@ -1,0 +1,26 @@
+{
+  "summary": "no finding link-broken at docs/en/docs/translation-banner.md:9",
+  "source": {
+    "repo": "fastapi/fastapi",
+    "sha": "b23d78f2ce4e7b3ea48a59f51ca249690d9fd02c",
+    "urls": [
+      "https://github.com/fastapi/fastapi/blob/b23d78f2ce4e7b3ea48a59f51ca249690d9fd02c/docs/en/docs/translation-banner.md#L9"
+    ]
+  },
+  "why": "ENGLISH_VERSION_URL is a placeholder the translation script replaces when it renders the banner. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "link-broken",
+      "file": "docs/en/docs/translation-banner.md",
+      "line": 9,
+      "message": "The link target `docs/en/docs/ENGLISH_VERSION_URL` does not exist."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "docs/en/docs/translation-banner.md",
+    "pyproject.toml"
+  ],
+  "builtWith": "0.7.0"
+}

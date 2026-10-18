@@ -52,7 +52,7 @@ The first checks the working tree of the checkout you are in (uncommitted and un
 
 | How | Command | Notes |
 |---|---|---|
-| No install | `npx -y staleproof <command>` | `-y` answers npx's install prompt. Pin a version for repeatable runs: `npx -y staleproof@0.7.0 <command>`. |
+| No install | `npx -y staleproof <command>` | `-y` answers npx's install prompt. Pin a version for repeatable runs: `npx -y staleproof@0.8.0 <command>`. |
 | Global install | `npm install -g staleproof`, then `staleproof <command>` | Puts `staleproof` on your `PATH`. |
 | From a clone | `npm install && npm run build`, then `node dist/cli.js <command>` | Or `npm run dev -- <command>` to run the TypeScript source. |
 
@@ -192,7 +192,7 @@ staleproof check [options] [pr-url]
 | `--dir <path>` | the current directory | Without a pull request: the git checkout to check. |
 | `--base <ref>` | the merge base with `origin/HEAD`, else `origin/main`, else `origin/master`, else `HEAD` | Without a pull request: the commit the working tree is compared with. |
 | `--repo <owner/name>` | the checkout's `origin` remote on github.com | Without a pull request: the GitHub repository the checkout is. |
-| `--fail-on-predicted` | off | Without a pull request: exit 1 when an example is predicted to break (a pre-push hook or a CI gate). |
+| `--fail-on-predicted` | off | Without a pull request: exit 1 when an example is predicted to break (a pre-push hook or a CI gate). A beta check's prediction is listed and fails nothing unless `[rules]` opts its rule in at `warning` or `error` ([False positives](false-positives.md#how-maturity-works)). |
 | `--annotations` | off | With a pull request: also print the docs references it makes wrong as GitHub workflow commands on stdout (`::error file=…,line=…::…`), which a GitHub Actions job turns into annotations. The [GitHub Action](github-action.md#docs-this-pull-request-makes-wrong) passes it. |
 
 **Docs this pull request makes wrong.** A pull request check also lints the repository's docs, READMEs and AI agent files at the two commits the pull request is compared between and reports the findings only the second has (in the comment of both modes, in graph mode's text and JSON, and with `--annotations`): a path the pull request moved that `AGENTS.md` still names, a script it renamed that the README still runs ([Lint: only what a change introduced](lint.md#only-what-a-change-introduced)). The commits come from the local clone the check uses (else from GitHub's tarballs, with `GITHUB_TOKEN` for private repositories). Graph mode runs it as its first step, `new_findings`; examples stay with the graph (predicted breaks and runs), so lint's own example checks are left out here. It is skipped when the graph recorded no real commits for the pull request, and its failure (or a run over 120 s) never fails the check: the comment then says `docs references not checked: <why>`.
@@ -342,7 +342,7 @@ Static check of the working tree: nothing was run or written to the graph. Push 
 
 With `--json`: `{summary, impact, cleared, newFindings}`, where `impact` has the shape of the [`impact` result](tools.md#impact-result) (`pr.state` is `local`) and `newFindings` lists the docs references the working tree makes wrong (`head` is `WORKTREE`). With `--format markdown`: the comment format, titled `these changes are predicted to break <n> docs example(s)` (or `<n> doc section(s) these changes can make false`), written to `--out` when given.
 
-**As a pre-push hook.** `--fail-on-predicted` exits 1 when any example is predicted to break, so git stops the push:
+**As a pre-push hook.** `--fail-on-predicted` exits 1 when an example is predicted to break (by a stable check, or a beta one the repository opts in), so git stops the push:
 
 ```bash
 printf '#!/bin/sh\nnpx -y staleproof check --fail-on-predicted\n' > .git/hooks/pre-push && chmod +x .git/hooks/pre-push

@@ -1,5 +1,7 @@
 import type { PrFindings } from '../agent/graph-check.js';
+import type { RuleSetting } from '../indexer/repo-config.js';
 import { formatMarkdown } from '../lint/format.js';
+import { exampleKindCounts, LOWER_CONFIDENCE_NOTE } from '../lint/maturity.js';
 import type { VerdictRow } from '../patch.js';
 import { allClearLine, commitLabel } from './text.js';
 import type { ExampleRunRow } from './report.js';
@@ -40,12 +42,12 @@ export const NEW_FINDINGS_HEADING = '#### Docs this pull request makes wrong';
  * The "Docs this pull request makes wrong" section: references in the docs and AI agent
  * files that were true at the base commit and are not at the head, agent files first.
  */
-export function newFindingsMarkdown(pf: PrFindings, subject = 'this pull request'): string {
+export function newFindingsMarkdown(pf: PrFindings, subject = 'this pull request', opts: { private?: boolean } = {}): string {
   const heading = subject === 'this pull request' ? NEW_FINDINGS_HEADING : `#### Docs ${subject} make wrong`;
   const intro =
     `References that were true at \`${pf.base.slice(0, 7)}\` and are not after ${subject}, in the docs, READMEs and AI agent instructions ` +
     '(read from the repository at both commits; no graph needed):';
-  const body = formatMarkdown({ version: 1, findings: pf.findings, summary: pf.summary, warnings: [] });
+  const body = formatMarkdown({ version: 1, findings: pf.findings, summary: pf.summary, warnings: [] }, { falsePositiveLinks: true, ...(opts.private !== undefined ? { private: opts.private } : {}) });
   const more = pf.total > pf.findings.length ? `\n\n_${pf.total - pf.findings.length} more not shown._` : '';
   const fixed = pf.fixed ? `\n\nIt also fixes ${pf.fixed} reference${pf.fixed === 1 ? '' : 's'} that ${pf.fixed === 1 ? 'was' : 'were'} wrong before.` : '';
   return `${heading}\n\n${intro}\n\n${body}${more}${fixed}`;
@@ -65,6 +67,13 @@ export function checkMarkdown(opts: {
   newFindings?: PrFindings;
   /** Why the docs references could not be checked, when they could not. */
   newFindingsError?: string;
+  /** The repository is private: report links carry only the rule, the message's shape and the version. */
+  private?: boolean;
+  /**
+   * Each docs repository's `[rules]` as indexed (src/graph/rule-settings.ts): a prediction of a beta example check
+   * counts (title, `predicted=`, `fail-on: predicted`) only when its repository opts the rule in.
+   */
+  ruleSettings?: ReadonlyMap<string, Record<string, RuleSetting>>;
 }): string {
   const { impact } = opts;
   const runs = opts.runs ?? [];
@@ -75,7 +84,10 @@ export function checkMarkdown(opts: {
   // `staleproof check` with no pull request reports on the working tree.
   const subject = impact.pr.state === 'local' ? 'these changes' : 'this pull request';
   const predicted = impact.predicted ?? [];
-  const predictedExamples = new Set(predicted.map((p) => p.example)).size;
+  // A beta check's prediction (src/lint/maturity.ts) is listed apart and never counted, unless its repository opts the rule in.
+  const counted = predicted.filter((p) => exampleKindCounts(p.kind, opts.ruleSettings?.get(p.repo)));
+  const lowerPredicted = predicted.filter((p) => !counted.includes(p));
+  const predictedExamples = new Set(counted.map((p) => p.example)).size;
   const elsewhere = impact.sections.filter((s) => !onTouchedPage(s.section.replace('#', ':'))).length;
   const n = impact.totalSections;
   const wrong = opts.newFindings?.total ?? 0;
@@ -95,18 +107,21 @@ export function checkMarkdown(opts: {
   const clear = breaks || runs.some((r) => r.verdict === 'fails' || r.verdict === 'changed-failure') ? undefined : allClearLine(impact, opts.newFindings);
   const out: string[] = [COMMENT_MARKER, `### Staleproof: ${title}`, '', clear ?? opts.summary, ''];
   // Above the graph's impact: these are certain (the reference is wrong at the head commit).
-  if (wrong) out.push(newFindingsMarkdown(opts.newFindings!, subject), '');
-  if (predicted.length) {
-    out.push(
-      `**Predicted to break** — the call as written no longer fits the code after ${subject} (a static check, before anything runs):`,
-      '',
-      '| Example | Call | Why |',
-      '|---|---|---|',
-    );
-    for (const p of predicted) {
+  if (wrong) out.push(newFindingsMarkdown(opts.newFindings!, subject, { private: opts.private }), '');
+  const predictedTable = (list: typeof predicted) => {
+    out.push('| Example | Call | Why |', '|---|---|---|');
+    for (const p of list) {
       out.push(`| [${esc(p.example.split(':').slice(1).join(':'))}](${p.url}) | \`${esc(p.call)}\` | ${esc(p.detail)}${p.confidence === 'by-name' ? ' (matched by name)' : ''} |`);
     }
     out.push('');
+  };
+  if (counted.length) {
+    out.push(`**Predicted to break** — the call as written no longer fits the code after ${subject} (a static check, before anything runs):`, '');
+    predictedTable(counted);
+  }
+  if (lowerPredicted.length) {
+    out.push(`**Predicted to break, lower confidence (beta rules)** — from static checks still earning trust: listed, never counted or failing a check.`, '', `<sub>${LOWER_CONFIDENCE_NOTE}</sub>`, '');
+    predictedTable(lowerPredicted);
   }
   if (runs.length) {
     const short = (sha: string) => sha.slice(0, 7);

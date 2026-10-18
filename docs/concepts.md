@@ -53,7 +53,7 @@ The code and docs half of the graph, which the [impact](#impact) walk follows fr
 
 ### Repo, File and Symbol
 
-- **Repo**: one per indexed GitHub repository: `name`, `url`, `sha` (the indexed commit), `indexed_at`, `index_version` (the index format, 3 since Staleproof 0.3), and `packages` (the top-level modules it defines: Python packages, and `js-<name>` for npm packages; empty for a docs-only repository).
+- **Repo**: one per indexed GitHub repository: `name`, `url`, `sha` (the indexed commit), `indexed_at`, `index_version` (the index format, 4 since Staleproof 0.5), `packages` (the top-level modules it defines: Python packages, and `js-<name>` for npm packages; empty for a docs-only repository), and `rule_settings` (its `[rules]` table as JSON, since 0.8: the [audit](audit.md#the-score) counts a beta rule it opts in).
 - **File**: one per indexed file (Python, TypeScript or JavaScript, a doc page, an example script), with its `kind`.
 - **Symbol**: one per definition in Python, TypeScript or JavaScript: `kind` is `module`, `class`, `function` or `method` (a `def` directly inside a class body; a `def` nested in a method is a `function`). It carries `qualname`, `name`, `signature`, the first line of its docstring, `decorators`, `visibility` (`special` for `__x__` and constructors, `private` for a leading `_` and for TypeScript's private or unexported declarations, else `public`), `exported` (whether the repository's packages export it; [Indexing](indexing.md#symbols)) and `status`.
 

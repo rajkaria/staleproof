@@ -586,7 +586,7 @@ function PreCommitWay({ version }: { version?: string }) {
       }
     >
       <p>
-        Stops a commit whose staged changes make the docs wrong: a renamed script the README still runs, a moved file <code>AGENTS.md</code> still names. It lints
+        Stops a commit whose staged changes make the docs wrong: a renamed script the README still runs, a link <code>AGENTS.md</code> still follows to a page that moved. It lints
         what the commit contains against <code>HEAD</code> and reads only the local clone.
       </p>
       <p className="small">

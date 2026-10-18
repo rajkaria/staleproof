@@ -1,0 +1,38 @@
+{
+  "summary": "no finding link-broken at docs/styles/align.md:10",
+  "source": {
+    "repo": "Textualize/textual",
+    "sha": "5e5b7ef58b8c5572c13a3ff9027d756623661495",
+    "urls": [
+      "https://github.com/Textualize/textual/blob/5e5b7ef58b8c5572c13a3ff9027d756623661495/docs/styles/align.md#L10"
+    ]
+  },
+  "why": "Raw HTML <a href=\"../../css_types/horizontal\"> in a MkDocs page resolves from the page URL (/styles/align/, use_directory_urls); docs/css_types/horizontal.md exists. The MkDocs config is split over mkdocs-common.yml, mkdocs-nav.yml and mkdocs-online.yml. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "link-broken",
+      "file": "docs/styles/align.md",
+      "line": 10,
+      "message": "The link target `css_types/horizontal` does not exist."
+    },
+    {
+      "rule": "link-broken",
+      "file": "docs/styles/align.md",
+      "line": 10,
+      "message": "The link target `css_types/vertical` does not exist."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "Makefile",
+    "docs/css_types/horizontal.md",
+    "docs/css_types/vertical.md",
+    "docs/styles/align.md",
+    "mkdocs-common.yml",
+    "mkdocs-nav.yml",
+    "mkdocs-online.yml",
+    "pyproject.toml"
+  ],
+  "builtWith": "0.7.0"
+}

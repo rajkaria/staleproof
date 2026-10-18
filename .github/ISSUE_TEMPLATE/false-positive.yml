@@ -1,0 +1,65 @@
+name: False positive
+description: Staleproof reported something that is not wrong. Your report becomes a regression test.
+title: "False positive: "
+labels: ["false-positive"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you: a wrong finding is a bug in Staleproof, never in your docs.
+
+        **What happens next.** We reproduce the finding and turn it into a fixture in [`test/fixtures/fp/`](https://github.com/rajkaria/staleproof/tree/main/test/fixtures/fp) (only the files the finding depends on). The rule is fixed so the fixture passes, and from then on every release runs the fixture as a regression guard, so this false positive cannot come back. Until the fix ships, a rule with an open report can be set to beta: it then reports at info and never fails a check or lowers a score. We answer on this issue. How it works: [False positives](https://staleproof.dev/#/docs/false-positives).
+
+        **Private repositories.** This issue is public. A "False positive?" link from a private repository (the GitHub App, the Action on a private repository) fills in only the rule, the message's shape and the version. If you fill this in yourself, leave out paths and file text you cannot share; the rule and the message's wording are often enough.
+  - type: input
+    id: rule
+    attributes:
+      label: Rule
+      description: The rule id the finding names, in brackets at the end of the line.
+      placeholder: env-unused
+    validations:
+      required: true
+  - type: input
+    id: repository
+    attributes:
+      label: Repository and commit
+      description: "`owner/name@sha` for a public repository, `local working tree`, or `private repository (not shared)`."
+      placeholder: pmndrs/zustand@d7a5583cffd80af515f7dfb69583c95cbdc9e2ce
+  - type: input
+    id: location
+    attributes:
+      label: File and line
+      placeholder: CONTRIBUTING.md:82
+  - type: textarea
+    id: message
+    attributes:
+      label: What Staleproof said
+      placeholder: "`MDX` is documented but no code reads it."
+    validations:
+      required: true
+  - type: textarea
+    id: text
+    attributes:
+      label: The line it flagged
+      description: The line as it is in the file (cut at 200 characters).
+      render: text
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it is not wrong
+      description: What Staleproof missed. One sentence is enough.
+      placeholder: "`MDX` is read by pmndrs/docs: the step says to set it in that repository's checkout, not this one."
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Staleproof version
+      description: "`staleproof --version`, or the version the report names."
+      placeholder: 0.8.0
+  - type: checkboxes
+    id: share
+    attributes:
+      label: Sharing
+      options:
+        - label: I can share this repository publicly (we may clone it at this commit and copy the files the finding depends on into the fixture)

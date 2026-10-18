@@ -1,0 +1,28 @@
+{
+  "summary": "no finding path-missing at AGENTS.md:147",
+  "source": {
+    "repo": "mem0ai/mem0",
+    "sha": "0724291bd864cf807e88ee8981c8226644e8fb42",
+    "urls": [
+      "https://github.com/mem0ai/mem0/blob/0724291bd864cf807e88ee8981c8226644e8fb42/AGENTS.md#L147"
+    ]
+  },
+  "why": "`license/cla` is the name of the CLA status check on pull requests (\"the `license/cla` check stays red\"), not a path. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "path-missing",
+      "file": "AGENTS.md",
+      "line": 147,
+      "message": "`license/cla` does not exist in the repository."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "AGENTS.md",
+    "LICENSE",
+    "Makefile",
+    "docs/docs.json",
+    "pyproject.toml"
+  ],
+  "builtWith": "0.7.0"
+}

@@ -24,6 +24,19 @@ interface Invocation {
 }
 
 const VERSIONED = /^(@?[^@\s]+)@(.+)$/;
+/** A version string: `3.0.0a2`, `v0.102.0`, `1.2.3-rc.1`. */
+const VERSION_WORD = /^v?\d+(?:\.\d+)+(?:[-.]?(?:a|b|rc|alpha|beta|dev|post)\.?\d*)?$/i;
+
+/**
+ * How many different programs the manifests install under this name: console scripts by their `module:func`,
+ * npm bins by their file. Two pyprojects pointing at the same `crewai_cli.cli:crewai` are one program.
+ */
+function declarers(name: string, sf: ScriptFacts): number {
+  const targets = new Set<string>();
+  for (const p of sf.pyprojects) if (p.scripts.has(name)) targets.add(`py:${p.scripts.get(name)}`);
+  for (const p of sf.packages) if (p.bins.has(name)) targets.add(`js:${p.dir}/${p.bins.get(name)}`);
+  return targets.size;
+}
 
 /** The own CLI a command line runs, if any, and its arguments. */
 function invocation(words: Word[], cf: CliFacts, sf: ScriptFacts, cmd: ShellCommand): Invocation | undefined {
@@ -233,6 +246,10 @@ export async function checkCli(doc: ScannedDoc, ctx: CommandCheckContext): Promi
     if (!inv) continue;
     // An example's or a test's own CLI is judged only on pages next to it.
     if (EXAMPLE_DIR.test(`${inv.cli.dir}/`) && !doc.path.startsWith(`${inv.cli.dir}/`)) continue;
+    // Two packages install a program of this name (agno's `agno` and agnoctl's `agno`): only one is modelled.
+    if (declarers(inv.cli.name, sf) > 1) continue;
+    // `agno 3.0.0a2`, `crewai v0.102.0`: a name and its version, as a listing prints them, not a command.
+    if (VERSION_WORD.test(inv.args[0]?.text ?? '') && inv.args.length === 1) continue;
     for (const f of judgeInvocation(inv)) if (!historical(doc, f.span as Word, cmd.inline)) out.push(f);
   }
   return out;

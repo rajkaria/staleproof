@@ -233,7 +233,7 @@ export class SymbolTable {
     }
     for (const call of mod.calls) {
       if (call.lineno < fromLine) continue;
-      const ctx: Ctx = { repo, mod, scope: call.scope, depth: 0, seen: new Set() };
+      const ctx: Ctx = { repo, mod, scope: call.scope, depth: 0, seen: new Set(), line: call.lineno };
       if (call.fn.k === 'attr' && !call.fn.attr.startsWith('__')) {
         const base = this.evalExpr(call.fn.obj, ctx);
         const missing = base ? this.missingMember(base, call.fn.attr, ctx) : undefined;
@@ -245,6 +245,9 @@ export class SymbolTable {
       if (!call.args) continue;
       const target = this.callTarget(call, ctx);
       if (!target) continue;
+      // A function the page defines itself is the reader's code, not the repository's: a tutorial that rebuilds
+      // `atom` block by block (jotai), a preset's own file shown before a config imports the real one (vite).
+      if (this.ephemeral.has(target.sym.module)) continue;
       const found = checkArgs(call.args, target.def.arity!, { dropFirst: target.dropFirst, callee: target.label, lang: this.langOf(target.sym) });
       // A constructor is called through its class by name: no subclass is involved.
       const viaInstance = target.sym.def.kind === 'method' && target.sym.def.name !== '__init__' && target.sym.def.name !== 'constructor';
@@ -720,8 +723,17 @@ export class SymbolTable {
   }
 
   private bindingFor(scope: string, name: string, ctx: Ctx): Val | undefined {
-    const bindings = this.bindingsByScope.get(scope)?.filter((b) => b.target === name);
+    let bindings = this.bindingsByScope.get(scope)?.filter((b) => b.target === name);
     if (!bindings?.length) return undefined;
+    // A docs page runs top to bottom: a name is its latest binding above the line, and when that one is unknown
+    // (`with sessions.create(...) as stream`, a factory whose overloads disagree) the name is unknown, not an
+    // earlier block's value of it (haystack's `router`, openai-python's `stream`).
+    if (ctx.line !== undefined && this.ephemeral.has(this.moduleOf(scope, ctx))) {
+      const above = bindings.filter((b) => b.lineno <= ctx.line!);
+      if (!above.length) return undefined;
+      const latest = Math.max(...above.map((b) => b.lineno));
+      bindings = above.filter((b) => b.lineno === latest);
+    }
     // Annotated bindings are the most reliable; then the latest assignment that evaluates.
     // A binding that resolves into the org beats one typed `Any`/external (`self._graph: Any = None`
     // followed by `self._graph = driver.select_graph(...)`).
@@ -731,7 +743,7 @@ export class SymbolTable {
       const key = `${b.scope}|${b.target}|${b.lineno}`;
       if (ctx.seen.has(key)) continue;
       const seen = new Set(ctx.seen).add(key);
-      const evalCtx: Ctx = { ...ctx, scope: b.at, seen, mod: this.modules.get(this.moduleOf(b.at, ctx))?.mod ?? ctx.mod };
+      const evalCtx: Ctx = { ...ctx, scope: b.at, seen, mod: this.modules.get(this.moduleOf(b.at, ctx))?.mod ?? ctx.mod, ...(ctx.line !== undefined ? { line: b.lineno - 1 } : {}) };
       if (b.annotation) {
         const v = this.fromAnnotation(b.annotation, evalCtx);
         if (v?.t === 'external') external ??= v;
@@ -794,6 +806,22 @@ export class SymbolTable {
     const def = fn.sym.def;
     if (def.kind === 'class') return { t: 'instance', cls: fn.sym };
     if (def.kind !== 'function' && def.kind !== 'method') return undefined;
+    // `@overload`s (or conditional definitions): which one a call picks decides its result, so the result is known
+    // only when every definition gives the same one (instructor's `from_provider`: six overloads, six client classes).
+    const defs = (this.byQualname.get(def.qualname) ?? []).filter((s) => s.repo === fn.sym.repo);
+    if (defs.length > 1) {
+      const results = defs.map((s) => this.singleResult(s, ctx));
+      const key = (v: Val | undefined) => (v?.t === 'instance' ? `i:${v.cls.id}` : v?.t === 'external' ? `e:${v.name}` : undefined);
+      const first = key(results[0]);
+      return first !== undefined && results.every((v) => key(v) === first) ? results[0] : undefined;
+    }
+    return this.singleResult(fn.sym, ctx);
+  }
+
+  /** What one definition's call evaluates to: its return annotation, else what it returns. */
+  private singleResult(sym: SymbolInfo, ctx: Ctx): Val | undefined {
+    const def = sym.def;
+    const fn = { sym };
     const modEntry = this.modules.get(fn.sym.module);
     const defCtx: Ctx = { ...ctx, repo: fn.sym.repo, mod: modEntry?.mod ?? ctx.mod, scope: def.qualname };
     if (def.returns) {
@@ -873,6 +901,8 @@ interface Ctx {
   scope: string;
   depth: number;
   seen: Set<string>;
+  /** The docs line being judged: on a page, a name means its latest binding at or above this line. */
+  line?: number;
 }
 
 /** A module as its users write it: npm packages without the `js-` namespace (`js-falkordb.graph` → `falkordb/graph`). */

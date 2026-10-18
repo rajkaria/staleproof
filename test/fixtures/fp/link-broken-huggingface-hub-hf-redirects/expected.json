@@ -1,0 +1,29 @@
+{
+  "summary": "no finding link-broken at docs/source/en/guides/overview.md:122",
+  "source": {
+    "repo": "huggingface/huggingface_hub",
+    "sha": "bb2ef7579c3d2dc2eb49b16ccf15a070fe5b7023",
+    "urls": [
+      "https://github.com/huggingface/huggingface_hub/blob/bb2ef7579c3d2dc2eb49b16ccf15a070fe5b7023/docs/source/en/guides/overview.md#L122"
+    ]
+  },
+  "why": "docs/source/en/_redirects.yml redirects guides/webhooks_server to guides/webhooks: the link works on hf.co. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "link-broken",
+      "file": "docs/source/en/guides/overview.md",
+      "line": 122,
+      "message": "The link target `docs/source/en/guides/webhooks_server` does not exist."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "Makefile",
+    "docs/source/en/_redirects.yml",
+    "docs/source/en/guides/overview.md",
+    "pyproject.toml",
+    "setup.py"
+  ],
+  "builtWith": "0.7.0"
+}

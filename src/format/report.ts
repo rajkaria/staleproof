@@ -5,6 +5,7 @@ import { clearanceTool, impactTool, rankSectionsTool } from '../tools/graph-tool
 import { verdictOf, type RunVerdict } from '../tools/run-example.js';
 import type { ToolContext } from '../tools/types.js';
 import { checkMarkdown } from './markdown.js';
+import { ruleSettingsOf } from '../graph/rule-settings.js';
 import { insertBeforeFooter, ownersForCheck } from '../codeowners.js';
 
 /** One example's latest runs at the commits before and after a pull request. */
@@ -65,7 +66,9 @@ export async function checkReport(ctx: ToolContext, org: string, prUrl: string, 
   const ranked = ids.length ? (await rankSectionsTool.run(ctx, { section_ids: ids })).data.ranked : undefined;
   const verdicts = await loadVerdicts(ctx, impact.data.pr.url);
   const runs = await loadRuns(ctx, impact.data.pr.url);
-  const md = checkMarkdown({ impact: impact.data, summary: impact.summary, cleared: clearance.data.cleared, ranked, verdicts, runs, agentSummary, org, newFindings, newFindingsError });
+  // Beta example checks count only where their repository opts them in (src/lint/maturity.ts).
+  const ruleSettings = await ruleSettingsOf(ctx.graph, [...new Set((impact.data.predicted ?? []).map((p) => p.repo))]);
+  const md = checkMarkdown({ impact: impact.data, summary: impact.summary, cleared: clearance.data.cleared, ranked, verdicts, runs, agentSummary, org, newFindings, newFindingsError, ruleSettings });
   // "Owners of affected docs": CODEOWNERS at the base commit, from the local clone or the public repository (no token).
   const owners = await ownersForCheck({ impact: impact.data, newFindings }, { home: ctx.config.home }).catch(() => '');
   return insertBeforeFooter(md, owners);

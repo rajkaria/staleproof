@@ -160,7 +160,8 @@ export async function writeCode(
     onProgress({ phase: 'write', repo, message: `writing ${p.modules.length} modules` });
     await graph.run(Q.upsertRepo, {
       name: repo,
-      props: { name: repo, url: `https://github.com/${repo}`, sha, indexed_at: Date.now(), packages: packagesOf(p.modules), index_version: INDEX_VERSION },
+      // `rule_settings`: the repository's `[rules]` (JSON), so the audit can count a beta rule the repository opted in (src/audit.ts).
+      props: { name: repo, url: `https://github.com/${repo}`, sha, indexed_at: Date.now(), packages: packagesOf(p.modules), index_version: INDEX_VERSION, rule_settings: JSON.stringify(p.config?.rules ?? {}) },
     });
     await writeBatched(
       graph,
@@ -261,7 +262,8 @@ async function writeFindings(graph: OrgGraph, p: ParsedRepo, run: string, opts: 
   const rows = r.findings.map((f) => {
     const id = `${repo}:${f.fingerprint}`;
     const { evidence, fix, repo: _repo, ...rest } = f;
-    return { id, section: sectionOf(f.path, f.line), props: { ...rest, id, repo, sha, run, evidence: JSON.stringify(evidence ?? {}), fix: fix ? JSON.stringify(fix) : '' } };
+    // `lowerConfidence` stored on every finding (beta rules, src/lint/maturity.ts), so a graph indexed before 0.8 (no property) can be told apart.
+    return { id, section: sectionOf(f.path, f.line), props: { ...rest, id, repo, sha, run, lowerConfidence: f.lowerConfidence === true, evidence: JSON.stringify(evidence ?? {}), fix: fix ? JSON.stringify(fix) : '' } };
   });
   await writeBatched(graph, Q.upsertFindings, rows);
   await graph.run(Q.markLinted, { repo, checked: true, count: rows.length });

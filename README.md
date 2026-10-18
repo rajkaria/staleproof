@@ -107,11 +107,16 @@ no example checks until it is indexed again; any other repository is indexed fre
 ([`examples/staleproof-audit.yml`](examples/staleproof-audit.yml)). [docs/audit.md](docs/audit.md) has the checks and
 the score.
 
-**Lint the docs and agent files, in a second.** `staleproof lint` checks every path, link, anchor and code example
-in the docs, READMEs and the files AI coding agents read on every session (`AGENTS.md`, `CLAUDE.md`, Cursor, Copilot,
-Windsurf and Cline rules) against the repository itself. No graph, no network. In docs, a missing path is reported
-only when git history shows the repository had it, with where it went; on eight public repositories every finding was
-real drift (renamed headings under deep links, test files moved under paths `AGENTS.md` still names).
+**Lint the docs and agent files, in a second.** `staleproof lint` checks the links, commands, env vars, docstrings
+and code examples in the docs, READMEs and the files AI coding agents read on every session (`AGENTS.md`, `CLAUDE.md`,
+Cursor, Copilot, Windsurf and Cline rules) against the repository itself: a script the README still runs after a
+rename, a link to a page that moved, a variable no code reads. No graph, no network. The paths a file names are
+checked too, as lower-confidence notes for now: missing paths are a beta rule until they prove themselves on
+repositories Staleproof was not tuned on. It is not always right: beta rules report at info and never fail a check,
+and a wrong finding is reported in one click ([False positives](docs/false-positives.md)). The
+[Drift Hall](https://staleproof.dev/#/drift) is the record: on 18 popular repositories checked only after the rules
+were tuned, every warning and error read by hand, 33 of 34 were real drift (links 28 of 28, docstrings 5 of 5); on the
+63 repositories the rules were tuned against, 843 of 881. Before that tuning (0.6.1), 19% were.
 
 ```bash
 npx -y staleproof lint            # --format github | sarif | json | markdown
@@ -793,7 +798,7 @@ MATCH (v:Verdict {check: $id})-[:ABOUT]->(d:DocSection)
 RETURN DISTINCT d.id AS id
 ```
 
-Indexing and reporting queries (48 more) are in [docs/GRAPH-MODEL.md](docs/GRAPH-MODEL.md).
+Indexing and reporting queries (49 more) are in [docs/GRAPH-MODEL.md](docs/GRAPH-MODEL.md).
 <!-- generated:cypher:end -->
 
 ## Develop

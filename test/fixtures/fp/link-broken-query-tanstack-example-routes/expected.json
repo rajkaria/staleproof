@@ -1,0 +1,34 @@
+{
+  "summary": "no finding link-broken at docs/framework/angular/installation.md:34",
+  "source": {
+    "repo": "TanStack/query",
+    "sha": "1099ebb4446bb6357e1c2dc849866ee14e3d6a96",
+    "urls": [
+      "https://github.com/TanStack/query/blob/1099ebb4446bb6357e1c2dc849866ee14e3d6a96/docs/framework/angular/installation.md#L34"
+    ]
+  },
+  "why": "Works on tanstack.com: `./examples/<name>` is the site's route for examples/<framework>/<name>; docs/config.json is the site's docs config. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "link-broken",
+      "file": "docs/framework/angular/installation.md",
+      "line": 34,
+      "message": "The link target `docs/framework/angular/examples/simple` does not exist."
+    },
+    {
+      "rule": "link-broken",
+      "file": "docs/framework/angular/installation.md",
+      "line": 34,
+      "message": "The link target `docs/framework/angular/examples/basic` does not exist."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "docs/config.json",
+    "docs/framework/angular/installation.md",
+    "package.json",
+    "pnpm-workspace.yaml"
+  ],
+  "builtWith": "0.7.0"
+}

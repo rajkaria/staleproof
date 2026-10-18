@@ -1,6 +1,6 @@
 # GitHub App
 
-The Staleproof GitHub App checks every pull request without a workflow file: install it on a repository, public or private, and each pull request gets a **Staleproof** check run with the docs references it makes wrong (as annotations on the lines), the doc sections its code changes reach and the examples predicted to break, plus a comment when there is something to say and one-click suggestions for the fixes Staleproof can verify. It runs on staleproof.dev's hosted service in graph mode: nothing to configure, no secrets, no database, no examples executed. This page is for maintainers choosing between the App and the [GitHub Action](github-action.md): what the App does, the permissions it asks for and why, what happens to a private repository's code, the `[app]` settings, and how to run your own copy.
+The Staleproof GitHub App checks every pull request without a workflow file: install it on a repository, public or private, and each pull request gets a **Staleproof** check run with the docs references it makes wrong (as annotations on the lines), the doc sections its code changes reach and the examples predicted to break, plus a comment when there is something to say and one-click suggestions for the fixes Staleproof can verify. It runs on staleproof.dev's hosted service in graph mode: nothing to configure, no secrets, no database. It can also run the docs examples a pull request reaches, before and after it, in a sandbox, when the server has that switched on ([Examples in a sandbox](#examples-in-a-sandbox)); staleproof.dev turns it on after its end-to-end run, and until then the [Action](github-action.md) is the way to run examples. This page is for maintainers choosing between the App and the [GitHub Action](github-action.md): what the App does, the permissions it asks for and why, what happens to a private repository's code, the `[app]` settings, and how to run your own copy.
 
 ## Install it
 
@@ -19,10 +19,11 @@ When a pull request is opened, pushed to, reopened or marked ready for review:
    - **Apply fixes**: a button when some findings have a verified fix (see [Fixes](#fixes)).
 4. **A comment**, only when there is something to say: new findings or examples predicted to break. It is the report, kept up to date in place on every push (one comment per pull request, found by its hidden marker). When a later push clears everything, the comment is edited to **All clear** rather than deleted, so the history of the review stays readable. `[app] comment` changes this.
 5. **Suggestions**: each verified fix whose lines are in the pull request's diff becomes a GitHub suggestion in one review, which the author commits with one click. A later push updates a suggestion on the same lines instead of adding another. When the [Action](github-action.md) runs on the repository too, a suggestion it already posted for the same findings, on the same lines and with the same text, counts as already there, so the App does not post it again (and the Action does the same for the App's); comments by people never count.
+6. **Examples, before and after**, when the server has example runs switched on (staleproof.dev does not yet): when the changed code reaches docs examples, up to 3 of them (those predicted to break first, as in the Action) run at the pull request's base and head commits in a [sandbox](#examples-in-a-sandbox), after the Staleproof check run is complete. Their results come in a second check run, **Staleproof · examples**, with the before/after table of the Action's report, and the comment is updated with the same table. An example that passes before and fails after is something to say: it gets a comment under `comment = "findings"`.
 
 Drafts are skipped until they are marked ready (or set `[app] drafts = true`). **Re-run** on the Checks tab, for one check run or the whole suite, runs the check again on the current head.
 
-The App runs graph mode only: no model judges the sections and no example is executed, so the report says "can make false" where the Action in agent mode would say "stale", and the example table stays empty. Use the [Action](github-action.md) for runs before and after.
+The App runs graph mode: no model judges the sections, so the report says "can make false" where the Action in agent mode would say "stale". Use the [Action](github-action.md) for agent mode, and for example runs before and after while the App's server has them switched off.
 
 ### Fixes
 
@@ -31,6 +32,17 @@ A fix is attached to a finding only when the right answer is unambiguous (a scri
 - **Inside the diff**: a suggestion on the line.
 - **Outside the diff** (a README the pull request did not touch still names the renamed script): listed in the comment with `npx staleproof fix`, and the check run's **Apply fixes** button commits them all to the pull request's branch, as one commit by the App on top of the head the check ran on. If the branch moved since, nothing is written and the check run says so; the new head has its own check and button. Branch protection that refuses the App is reported the same way. The App never force-pushes.
 - **Pull requests from forks**: the App cannot push to a fork, so there is no button; the check run's details carry the fixes as a patch (`git apply` it, or run `npx staleproof fix` in the checkout).
+
+### Examples in a sandbox
+
+When the server has it switched on (`STALEPROOF_APP_RUN_EXAMPLES=on`, see [Run your own App](#run-your-own-app)), the **Staleproof · examples** check run is the Action's example runs ([Example runner](example-runner.md)) on the App's server, in a [Vercel Sandbox](https://vercel.com/docs/sandbox) (a Firecracker microVM) instead of the Actions runner. staleproof.dev ships with it off and turns it on after its end-to-end run; until then its Staleproof check run says the examples run in the Action, and the [Action](github-action.md) runs them.
+
+- **Which examples**: the ones graph mode selects, at most 3: examples predicted to break first, then the examples of exactly linked sections, never one the docs mark `skip` or `expect-error`. Each runs at the pull request's base commit and at its head; an edited page is run as the pull request leaves it.
+- **How**: one sandbox per check, created when the first example needs it and deleted at the end (nothing is kept). Each repository is read at its commit by the App's server, private ones with the installation's token, and uploaded into the sandbox: the token never enters it. With network: Python 3.12 and a virtualenv per set of commits (the repositories installed from source with uv), and a scratch FalkorDB. Without network (no egress, no DNS): each example, through the same entry point, network shim and environment as the Action's sandbox, with the same timeout (`STALEPROOF_RUN_TIMEOUT_MS`, 30 s).
+- **Verdicts**: the same as everywhere: `breaks` (passes before, fails after), `fixes`, `passes`, `already-broken`, `changed-failure`, not run (skipped, with the reason), not installed. A run with the same program and commits is recorded and answered again without a sandbox, so a re-run of the check is fast.
+- **Conclusion**: `neutral` when the pull request breaks an example, `failure` when it does and `[app] fail-on = "predicted"`, `success` when the examples ran and none breaks. A sandbox that cannot start or runs out of time ends the check `neutral` with the reason: it never fails a pull request.
+- **When examples are not run**, the Staleproof check run says why and that the Action runs them: the repository sets `run-examples = false`, the server does not run examples (the switch is off, as on staleproof.dev for now), the check had no time left (a repository's first pull request is indexed first), or the day's budget is used up. JavaScript and TypeScript examples run in the Action and the CLI only, for now.
+- **Private repositories**: the runs (status, error line, the end of the output, the commits installed) are kept in the installation's own graph, like everything else the App records; the sandbox and the archives are gone after the check.
 
 ## Pushes to the default branch
 
@@ -56,17 +68,19 @@ drafts = false             # check draft pull requests too
 also-index = []            # other repositories indexed with this one, e.g. ["acme/docs"]
 fix-prs = false            # daily: the staleproof/fix-docs pull request
 audit-issue = false        # daily: keep the audit issue
+run-examples = true        # run the affected docs examples before and after, in a sandbox (when the server runs examples)
 ```
 
 | Key | Default | Effect |
 |---|---|---|
 | `comment` | `"findings"` | `findings`: comment only when the pull request makes a docs reference wrong or an example is predicted to break, and edit the comment to "All clear" once it no longer does. `always`: keep the report in a comment on every pull request. `never`: the check run only |
-| `fail-on` | `"never"` | `findings`: the check run fails when the pull request makes an **error**-level docs reference wrong. `predicted`: it fails when an example is predicted to break. `never`: it is `neutral` at worst. Make the check required in branch protection to block merges on it |
+| `fail-on` | `"never"` | `findings`: the check run fails when the pull request makes an **error**-level docs reference wrong. Beta rules never fail the check unless `[rules]` opts them in. `predicted`: it fails when an example is predicted to break by a stable check, or by a beta one the repository opts in at `warning` or `error`. The **Staleproof · examples** check fails when an example breaks and `fail-on` is `predicted`. `never`: it is `neutral` at worst. Make the check required in branch protection to block merges on it |
 | `suggestions` | `true` | Post verified fixes inside the diff as review suggestions |
 | `drafts` | `false` | Check draft pull requests (otherwise they are checked when marked ready) |
 | `also-index` | `[]` | Repositories indexed together with this one, so docs in another repository (a docs site, an SDK's docs) are linked to this repository's code. For a private repository they may be other repositories of the same installation; one the installation cannot read is left out. For a public repository they must be public |
 | `fix-prs` | `false` | Open and update the daily docs fix pull request |
 | `audit-issue` | `false` | Keep the daily audit issue |
+| `run-examples` | `true` | Run the docs examples a pull request reaches before and after it in a sandbox (the **Staleproof · examples** check), when the server has example runs switched on (staleproof.dev does not yet). `false`: the Staleproof check says they run in the Action |
 
 Lint settings (`[lint]`, `[rules]`, `ignore`) apply as everywhere else ([Configuration](configuration.md#repository-configuration)).
 
@@ -74,7 +88,7 @@ Lint settings (`[lint]`, `[rules]`, `ignore`) apply as everywhere else ([Configu
 
 | Permission | Access | Why |
 |---|---|---|
-| Checks | write | Create and complete the Staleproof check run, its annotations and its Apply fixes button |
+| Checks | write | Create and complete the Staleproof check run (and Staleproof · examples, when the server runs examples), the annotations and the Apply fixes button |
 | Contents | write | Read the repository (its archive at both commits, the compare view, `.staleproof.toml`); commit fixes when you click **Apply fixes**, and push the `staleproof/fix-docs` branch when `fix-prs` is on. The App writes nothing else: only to the pull request's branch on your click, and only to `staleproof/*` branches on its own |
 | Pull requests | write | Read pull requests, post the review with suggestions, and open the docs fix pull request |
 | Issues | write | The pull request comment (pull request comments are issue comments) and the audit issue |
@@ -100,7 +114,7 @@ Events: `pull_request`, `push`, `check_run`, `check_suite`, plus `installation` 
 | Private repositories | Yes, indexed on Staleproof's server (above) | Yes, nothing leaves the runner except what you send |
 | Docs references made wrong, annotations | Yes | Yes |
 | Doc sections reached, examples predicted to break | Yes | Yes |
-| **Examples run before and after** | No | Yes |
+| **Examples run before and after** | When the server has it switched on (not yet on staleproof.dev): Python, in a sandbox, up to 3 per pull request | Yes, Python and JS/TS, on the runner |
 | Agent mode (a model judges each section, proposes the edits) | No | Yes, with your key |
 | Suggestions for verified fixes | Yes | Yes (`suggestions: true`) |
 | Apply fixes button | Yes | No (`npx staleproof fix`) |
@@ -134,7 +148,20 @@ For a self-hosted Staleproof server ([Deploy](DEPLOY.md)):
 | `GITHUB_APP_SLUG` | Optional: shows the install button (`github.com/apps/<slug>`) |
 | `CRON_SECRET` | Protects `GET /api/github/cron`; Vercel Cron sends it as a bearer token. Without it the daily job is off |
 
-Without the first three, `POST /api/github/webhook` and `GET /api/github/cron` answer 404 and nothing else changes. The webhook answers `202` at once and does the work in the background (on Vercel through `waitUntil`, within the function's 300 s); payloads over 25 MB are refused, and a delivery id seen in the last 24 hours is ignored, so redelivering an event from the App's settings does nothing.
+To run examples in a sandbox, the server needs Vercel Sandbox: on Vercel the function's OIDC token is used (Settings → Security → OIDC federation on); elsewhere set an access token with its team and project. Then switch it on:
+
+| Variable | Meaning |
+|---|---|
+| `STALEPROOF_APP_RUN_EXAMPLES` | `on` runs the affected examples in a sandbox (off by default) |
+| `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID` | Sandbox credentials off Vercel (all three) |
+| `STALEPROOF_APP_EXAMPLE_CHECKS_PER_DAY` | Checks with example runs per day, across installations (default 200) |
+| `STALEPROOF_APP_EXAMPLES_BUDGET_S` | At most this long for one pull request's examples (default 600) |
+| `STALEPROOF_APP_MAX_DURATION_S` | The function's time limit when the platform does not say (on Vercel it does) |
+| `STALEPROOF_SANDBOX_REGION` | The sandbox region (default: the project's) |
+
+The examples run after the webhook answered, within the function's time limit: set `maxDuration` to 800 on Vercel Pro (300 is Hobby's maximum, which leaves a few minutes after the graph check). Ship `scripts/falkordb-local.sh` with the function (`includeFiles`).
+
+Without the first three, `POST /api/github/webhook` and `GET /api/github/cron` answer 404 and nothing else changes. The webhook answers `202` at once and does the work in the background (on Vercel through `waitUntil`, within the function's `maxDuration`); payloads over 25 MB are refused, and a delivery id seen in the last 24 hours is ignored, so redelivering an event from the App's settings does nothing.
 
 ## Related
 

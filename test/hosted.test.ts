@@ -352,7 +352,8 @@ describe('hosted lint (FalkorDB)', () => {
     expect(requested.length).toBe(downloads);
     const md = await app.request('/api/lint?repo=lintco/lint-app&format=markdown');
     expect(md.headers.get('content-type')).toContain('text/markdown');
-    expect(await md.text()).toContain('**AI agent instructions**');
+    // The agent files' findings are path-missing, a beta rule: listed last, under lower confidence.
+    expect(await md.text()).toContain('**Lower confidence (beta rules)**');
     const sarif = (await (await app.request('/api/lint?repo=lintco/lint-app&format=sarif&rule=link-broken')).json()) as { runs: { results: unknown[] }[] };
     expect(sarif.runs[0]!.results).toHaveLength(2);
     expect((await app.request('/api/lint?repo=lintco/nope')).status).toBe(404);
@@ -380,7 +381,8 @@ describe('hosted lint (FalkorDB)', () => {
     const audit = (await (await app.request('/api/audit?repo=lintco/lint-app&fresh=1')).json()) as { findings: { path: string; line: number; rule: string; subject: string; surface: string }[]; deductions: { points: number; why: string }[]; repos: { findingsChecked: boolean }[] };
     expect(audit.findings.map((f) => `${f.path}:${f.line} ${f.rule} ${f.subject}`)).toEqual(expected);
     expect(audit.findings.map((f) => f.surface)).toEqual(['agent', 'agent', 'readme', 'docs']);
-    expect(audit.deductions.find((d) => d.why.startsWith('Docs references'))?.points).toBe(12);
+    // The two link-broken errors (3 each); the beta path-missing findings are listed and never deducted.
+    expect(audit.deductions.find((d) => d.why.startsWith('Docs references'))?.points).toBe(6);
     expect(audit.repos[0]!.findingsChecked).toBe(true);
   });
 
@@ -398,7 +400,7 @@ describe('hosted lint (FalkorDB)', () => {
     expect(impact.newFindings.findings.map((f) => `${f.path} ${f.rule} ${f.subject}`)).toEqual(['AGENTS.md path-missing src/app.ts']);
     const finished = events.find((e) => e.type === 'check_finished')!;
     expect(finished.status).toBe('done');
-    expect(finished.summary).toMatch(/^This pull request makes 1 docs reference wrong \(1 error, 1 in AI agent instructions\): AGENTS\.md:3 `src\/app\.ts`\./);
+    expect(finished.summary).toMatch(/^This pull request makes 1 docs reference wrong \(1 info, 1 in AI agent instructions\): AGENTS\.md:3 `src\/app\.ts`\./);
     // Both commits from codeload, never the API with the server's token.
     expect(requested.filter((u) => u.includes('/tar.gz/')).sort()).toEqual([mainSha, prSha].map((s) => `https://codeload.github.com/lintco/lint-app/tar.gz/${s}`).sort());
     expect(requested.some((u) => u.includes('api.github.com'))).toBe(false);

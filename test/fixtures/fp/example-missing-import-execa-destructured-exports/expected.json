@@ -1,0 +1,34 @@
+{
+  "summary": "no finding example-missing-import at docs/ipc.md:34",
+  "source": {
+    "repo": "sindresorhus/execa",
+    "sha": "b87aab71b2ac3da1799914a7ef79a36bd2d14c03",
+    "urls": [
+      "https://github.com/sindresorhus/execa/blob/b87aab71b2ac3da1799914a7ef79a36bd2d14c03/docs/ipc.md#L34"
+    ]
+  },
+  "why": "execa's index.js exports them as 'const {sendMessage, getOneMessage, getEachMessage, getCancelSignal} = getIpcExport(); export {sendMessage, getOneMessage, getEachMessage, getCancelSignal};': names bound by destructuring and exported by an export list. (43 findings on readme.md and docs/*.md.)",
+  "absent": [
+    {
+      "rule": "example-missing-import",
+      "file": "docs/ipc.md",
+      "line": 34,
+      "message": "`execa` has no `getOneMessage`."
+    },
+    {
+      "rule": "example-missing-import",
+      "file": "docs/ipc.md",
+      "line": 34,
+      "message": "`execa` has no `sendMessage`."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "docs/ipc.md",
+    "index.d.ts",
+    "index.js",
+    "license",
+    "package.json"
+  ],
+  "builtWith": "0.7.0"
+}

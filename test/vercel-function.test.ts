@@ -3,6 +3,12 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 describe('Vercel function', () => {
+  it('ships the files the App’s sandbox runner uploads', async () => {
+    const config = JSON.parse(await readFile(join(import.meta.dirname, '..', 'vercel.json'), 'utf8')) as { functions: Record<string, { includeFiles?: string }> };
+    const include = config.functions['api/index.js']!.includeFiles ?? '';
+    for (const f of ['python/**', 'scripts/falkordb-local.sh']) expect(include).toContain(f);
+  });
+
   it('receives every /api path through one rewrite', async () => {
     const config = JSON.parse(await readFile(join(import.meta.dirname, '..', 'vercel.json'), 'utf8')) as { rewrites: { source: string; destination: string }[]; functions: Record<string, unknown> };
     expect(config.rewrites).toContainEqual({ source: '/api/:path*', destination: '/api' });

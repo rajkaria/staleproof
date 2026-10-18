@@ -1,0 +1,31 @@
+{
+  "summary": "no finding link-broken at js/storybook/Introduction.mdx:44",
+  "source": {
+    "repo": "gradio-app/gradio",
+    "sha": "de986c72372e233ffaaa7abe1b93608d4d115065",
+    "urls": [
+      "https://github.com/gradio-app/gradio/blob/de986c72372e233ffaaa7abe1b93608d4d115065/js/storybook/Introduction.mdx#L44"
+    ]
+  },
+  "why": "./gradio.svg is served from Storybook's staticDirs (.storybook/main.ts includes js/storybook/public, which has gradio.svg). Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "link-broken",
+      "file": "js/storybook/Introduction.mdx",
+      "line": 44,
+      "message": "The link target `js/storybook/gradio.svg` does not exist."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    ".storybook/main.ts",
+    "LICENSE",
+    "js/storybook/Introduction.mdx",
+    "js/storybook/package.json",
+    "js/storybook/public/gradio.svg",
+    "package.json",
+    "pnpm-workspace.yaml",
+    "pyproject.toml"
+  ],
+  "builtWith": "0.7.0"
+}

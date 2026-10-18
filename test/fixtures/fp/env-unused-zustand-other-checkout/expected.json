@@ -1,0 +1,34 @@
+{
+  "summary": "no finding env-unused at CONTRIBUTING.md:82",
+  "source": {
+    "repo": "pmndrs/zustand",
+    "sha": "d7a5583cffd80af515f7dfb69583c95cbdc9e2ce",
+    "urls": [
+      "https://github.com/pmndrs/zustand/blob/d7a5583cffd80af515f7dfb69583c95cbdc9e2ce/CONTRIBUTING.md#L82"
+    ]
+  },
+  "why": "MDX and HOME_REDIRECT are read by pmndrs/docs, not by zustand: the step says 'Separately, clone the pmndrs/docs ... Inside the pmndrs/docs directory: create a .env file' (lines 80-82). pmndrs/docs reads both (dev.sh, start.sh and preview.sh export MDX; its .github/workflows/build.yml sets HOME_REDIRECT from the home_redirect input that zustand's .github/workflows/docs.yml passes). Nothing in zustand reads them (git grep: CONTRIBUTING.md only).",
+  "absent": [
+    {
+      "rule": "env-unused",
+      "file": "CONTRIBUTING.md",
+      "line": 82,
+      "message": "`MDX` is documented but no code reads it."
+    },
+    {
+      "rule": "env-unused",
+      "file": "CONTRIBUTING.md",
+      "line": 82,
+      "message": "`HOME_REDIRECT` is documented but no code reads it."
+    }
+  ],
+  "files": [
+    ".github/workflows/docs.yml",
+    ".gitignore",
+    "CONTRIBUTING.md",
+    "LICENSE",
+    "package.json",
+    "pnpm-workspace.yaml"
+  ],
+  "builtWith": "0.6.1"
+}

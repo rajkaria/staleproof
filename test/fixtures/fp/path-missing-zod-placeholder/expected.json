@@ -1,0 +1,26 @@
+{
+  "summary": "no finding path-missing at .claude/skills/triage/SKILL.md:212",
+  "source": {
+    "repo": "colinhacks/zod",
+    "sha": "680d19f7d1e042e55934209caeb79bc843b94f44",
+    "urls": [
+      "https://github.com/colinhacks/zod/blob/680d19f7d1e042e55934209caeb79bc843b94f44/.claude/skills/triage/SKILL.md#L212"
+    ]
+  },
+  "why": "`../NNNN/results.md` is a template: the skill tells the agent to cross-link a sibling issue's results with a relative path, NNNN standing for the issue number. No real path is claimed.",
+  "absent": [
+    {
+      "rule": "path-missing",
+      "file": ".claude/skills/triage/SKILL.md",
+      "line": 212,
+      "message": "`../NNNN/results.md` does not exist in the repository."
+    }
+  ],
+  "files": [
+    ".claude/skills/triage/SKILL.md",
+    ".gitignore",
+    "LICENSE",
+    "package.json"
+  ],
+  "builtWith": "0.6.1"
+}

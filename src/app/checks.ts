@@ -15,7 +15,8 @@ export const ANNOTATIONS_PER_REQUEST = 50;
 /** GitHub refuses a check run summary or text over 65535 characters. */
 export const MAX_OUTPUT = 65_000;
 
-export type ResolvedAppConfig = Required<AppConfig>;
+/** `runExamples` (`[app] run-examples`): run the affected examples in a sandbox when the server can (src/app/examples.ts). */
+export type ResolvedAppConfig = Required<AppConfig> & { runExamples: boolean };
 
 export const APP_DEFAULTS: ResolvedAppConfig = {
   comment: 'findings',
@@ -25,6 +26,7 @@ export const APP_DEFAULTS: ResolvedAppConfig = {
   fixPrs: false,
   auditIssue: false,
   alsoIndex: [],
+  runExamples: true,
 };
 
 export function resolveAppConfig(app?: AppConfig): ResolvedAppConfig {
@@ -44,6 +46,8 @@ export interface CheckOutcome {
   sections: number;
   /** Impacted sections a model judged stale (agent mode only; graph mode has none). */
   stale: number;
+  /** Examples that pass before the pull request and fail after it, once they have run (src/app/examples.ts). */
+  breaks?: number;
 }
 
 export interface Annotation {
@@ -71,7 +75,7 @@ export function annotationsOf(findings: readonly Finding[]): Annotation[] {
       ...(sameLine ? { start_column: f.column, end_column: f.endColumn - 1 } : {}),
       annotation_level: LEVEL[f.severity],
       message: `${f.message}${f.fix?.verified ? ` Fix: ${f.fix.description}` : ''}${f.evidence?.looked ? ` (looked in ${f.evidence.looked})` : ''}`.slice(0, 60_000),
-      title: `${f.rule}: ${f.subject}`.slice(0, 255),
+      title: `${f.rule}${f.lowerConfidence ? ' (beta, lower confidence)' : ''}: ${f.subject}`.slice(0, 255),
     };
   });
 }
@@ -84,13 +88,13 @@ export function chunks<T>(items: readonly T[], size = ANNOTATIONS_PER_REQUEST): 
 
 /** Whether the pull request needs a comment under `comment = "findings"`. */
 export function somethingToSay(o: CheckOutcome): boolean {
-  return (o.newFindings?.total ?? 0) > 0 || o.predicted > 0 || o.stale > 0;
+  return (o.newFindings?.total ?? 0) > 0 || o.predicted > 0 || o.stale > 0 || (o.breaks ?? 0) > 0;
 }
 
 /** `success` when clean, `neutral` with findings, `failure` when `[app] fail-on` says so. */
 export function conclusionOf(o: CheckOutcome, failOn: ResolvedAppConfig['failOn']): 'success' | 'neutral' | 'failure' {
   if (failOn === 'findings' && (o.newFindings?.summary.errors ?? 0) > 0) return 'failure';
-  if (failOn === 'predicted' && o.predicted > 0) return 'failure';
+  if (failOn === 'predicted' && (o.predicted > 0 || (o.breaks ?? 0) > 0)) return 'failure';
   return somethingToSay(o) ? 'neutral' : 'success';
 }
 
@@ -100,6 +104,7 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 export function checkTitle(o: CheckOutcome): string {
   const parts: string[] = [];
   const wrong = o.newFindings?.total ?? 0;
+  if (o.breaks) parts.push(`${plural(o.breaks, 'example')} broken (passes before, fails after)`);
   if (wrong) parts.push(`${plural(wrong, 'docs reference')} made wrong`);
   if (o.predicted) parts.push(`${plural(o.predicted, 'example')} predicted to break`);
   if (o.stale) parts.push(`${plural(o.stale, 'section')} judged stale`);

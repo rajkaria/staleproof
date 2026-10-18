@@ -1,0 +1,28 @@
+{
+  "summary": "no finding link-broken at docs_src/tutorial/fastapi/app_testing/tutorial001_py310/annotations/en/test_main_003.md:3",
+  "source": {
+    "repo": "fastapi/sqlmodel",
+    "sha": "462b59d9cd1cc3d9072735435330ef9ab6d15cbf",
+    "urls": [
+      "https://github.com/fastapi/sqlmodel/blob/462b59d9cd1cc3d9072735435330ef9ab6d15cbf/docs_src/tutorial/fastapi/app_testing/tutorial001_py310/annotations/en/test_main_003.md#L3"
+    ]
+  },
+  "why": "The file is a code annotation fragment that mkdocs includes into docs/tutorial/fastapi/tests.md; its link ../create-db-and-table.md is written from that page, where docs/tutorial/create-db-and-table.md exists.",
+  "absent": [
+    {
+      "rule": "link-broken",
+      "file": "docs_src/tutorial/fastapi/app_testing/tutorial001_py310/annotations/en/test_main_003.md",
+      "line": 3,
+      "message": "The link target `docs_src/tutorial/fastapi/app_testing/tutorial001_py310/annotations/create-db-and-table.md` does not exist."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE",
+    "docs/tutorial/create-db-and-table.md",
+    "docs_src/tutorial/fastapi/app_testing/tutorial001_py310/annotations/en/test_main_003.md",
+    "mkdocs.yml",
+    "pyproject.toml"
+  ],
+  "builtWith": "0.7.0"
+}

@@ -34,6 +34,30 @@ export function bareModule(spec: string): string {
   return [npmToken(pkg), ...rest].join('.');
 }
 
+/** The names a destructuring pattern binds: `{a, b: c, ...d}` → a, c, d; `[x, , y = 1]` → x, y. */
+function patternNames(node: Node): string[] {
+  switch (node.type) {
+    case 'identifier':
+    case 'shorthand_property_identifier_pattern':
+      return [node.text];
+    case 'pair_pattern': {
+      const v = node.childForFieldName('value');
+      return v ? patternNames(v) : [];
+    }
+    case 'assignment_pattern':
+    case 'object_assignment_pattern': {
+      const l = node.childForFieldName('left') ?? node.namedChildren[0];
+      return l ? patternNames(l) : [];
+    }
+    case 'object_pattern':
+    case 'array_pattern':
+    case 'rest_pattern':
+      return node.namedChildren.flatMap((c) => (c ? patternNames(c) : []));
+    default:
+      return [];
+  }
+}
+
 export function sanitize(segment: string): string {
   return segment.replace(/[^A-Za-z0-9_$-]/g, '_');
 }
@@ -90,7 +114,9 @@ export async function extractTs(source: string, opts: TsExtractOptions): Promise
     isAsync: false,
   };
   out.defs.push(moduleDef);
-  const target = (spec: string) => (spec.startsWith('.') ? opts.resolve?.(spec) : bareModule(spec));
+  // A declaration file named by path (`vite/types/customEvent.d.ts`, a type-only `exports` subpath) holds types
+  // only, read by the compiler and not here: such an import is not recorded, so it is never judged.
+  const target = (spec: string) => (spec.startsWith('.') ? opts.resolve?.(spec) : /\.d\.[cm]?ts$/.test(spec) ? undefined : bareModule(spec));
   const imp = (alias: string, tgt: string | undefined, node: Node, exported = false) => {
     if (tgt) out.imports.push({ alias, target: tgt, lineno: node.startPosition.row + 1, ...(exported ? { exported: true } : {}) });
   };
@@ -262,11 +288,19 @@ export async function extractTs(source: string, opts: TsExtractOptions): Promise
       return;
     }
     if (nameNode?.type !== 'identifier') {
+      // `const {sendMessage, getOneMessage} = getIpcExport()`: each name is bound here (execa then exports them
+      // with an export list), though what it holds is not known.
+      for (const id of nameNode ? patternNames(nameNode) : []) {
+        out.bindings.push({ scope: scope.qualname, at: scope.qualname, target: id, lineno: d.startPosition.row + 1 });
+      }
       if (value) visit(value, scope);
       return;
     }
     if (value && (value.type === 'arrow_function' || value.type === 'function_expression' || value.type === 'function') && scope.kind === 'module') {
-      addFunction(nameNode.text, value, scope, 'function', exported ? [] : ['internal']);
+      // `export const replace: RedirectFunction = (url, init) => …`: the declared type, not the arrow's own
+      // parameters, says which are optional (`init?:`), so the arity is not trusted (TanStack/router, react-router).
+      const typed = !!d.childForFieldName('type');
+      addFunction(nameNode.text, value, scope, 'function', [...(exported ? [] : ['internal']), ...(typed ? ['typed-by-annotation'] : [])]);
       return;
     }
     out.bindings.push({
@@ -323,6 +357,8 @@ export async function extractTs(source: string, opts: TsExtractOptions): Promise
             const name = s.childForFieldName('name')?.text ?? '';
             const alias = s.childForFieldName('alias')?.text ?? name;
             if (mod) imp(alias, `${mod}.${name}`, node, true);
+            // Re-exported from a file this checkout does not have (types generated or left out): still exported.
+            else if (spec) imp(alias, `?${spec}.${name}`, node, true);
             else if (alias === name) exportedLocal.add(name);
             else imp(alias, `${opts.module}.${name}`, node, true);
           }
@@ -336,6 +372,11 @@ export async function extractTs(source: string, opts: TsExtractOptions): Promise
         }
         if (mod) {
           imp('*', mod, node, true);
+          return;
+        }
+        // `export * from './generated.js'` of a file this checkout lacks: the module's names are not all known.
+        if (spec) {
+          imp('*', `?${spec}`, node, true);
           return;
         }
         const value = node.childForFieldName('value');

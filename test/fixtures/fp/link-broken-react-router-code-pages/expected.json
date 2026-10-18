@@ -1,0 +1,28 @@
+{
+  "summary": "no finding link-broken at docs/api/framework-conventions/entry.client.tsx.md:43",
+  "source": {
+    "repo": "remix-run/react-router",
+    "sha": "ba64bc919b9e7100fa94825ab44d51f1b76c39f1",
+    "urls": [
+      "https://github.com/remix-run/react-router/blob/ba64bc919b9e7100fa94825ab44d51f1b76c39f1/docs/api/framework-conventions/entry.client.tsx.md#L43"
+    ]
+  },
+  "why": "An extensionless link to a page whose file name carries a code extension: entry.server.tsx.md exists, served at /entry.server.tsx. Drift Hall, Oct 18.",
+  "absent": [
+    {
+      "rule": "link-broken",
+      "file": "docs/api/framework-conventions/entry.client.tsx.md",
+      "line": 43,
+      "message": "The link target `docs/api/framework-conventions/entry.server.tsx` does not exist."
+    }
+  ],
+  "files": [
+    ".gitignore",
+    "LICENSE.md",
+    "docs/api/framework-conventions/entry.client.tsx.md",
+    "docs/api/framework-conventions/entry.server.tsx.md",
+    "package.json",
+    "pnpm-workspace.yaml"
+  ],
+  "builtWith": "0.7.0"
+}
